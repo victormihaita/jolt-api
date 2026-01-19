@@ -48,7 +48,7 @@ steps:
         "${_SERVICE_MIN_INSTANCES}",
         "--max-instances",
         "${_SERVICE_MAX_INSTANCES}",
-        "--set-env-vars=ENVIRONMENT=production,GIN_MODE=release,PORT=8080",
+        "--set-env-vars=ENVIRONMENT=production,GIN_MODE=release",
         "--set-secrets=DATABASE_URL=prod_database-url:latest",
         "--set-secrets=JWT_SECRET=prod_jwt-secret:latest",
         "--set-secrets=GOOGLE_CLIENT_ID=prod_google-client-id:latest",
