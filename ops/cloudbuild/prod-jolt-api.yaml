@@ -1,0 +1,78 @@
+# Trigger info
+#   NAME: prod-jolt-api
+#   DESCRIPTION: Build and deploy to Cloud Run on push to main
+#   REGION: europe-west1
+#   TAGS: jolt-api
+#   EVENT: Push to branch
+#   BASE BRANCH: ^main$
+
+steps:
+  - id: "Build the container image"
+    name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-f",
+        "Dockerfile",
+        "-t",
+        "${_IMAGE_NAME}",
+        "."
+      ]
+  - id: "Push the container image to Artifact Registry"
+    name: "gcr.io/cloud-builders/docker"
+    args: ["push", "${_IMAGE_NAME}"]
+  - id: "Deploy the container image to Cloud Run"
+    name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
+    entrypoint: "gcloud"
+    args:
+      [
+        "run",
+        "deploy",
+        "${_SERVICE_NAME}",
+        "--platform",
+        "managed",
+        "--region",
+        "${_REGION}",
+        "--allow-unauthenticated",
+        "--image",
+        "${_IMAGE_NAME}",
+        "--labels",
+        "managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$SHORT_SHA,gcb-build-id=$BUILD_ID",
+        "--cpu",
+        "${_SERVICE_CPU_COUNT}",
+        "--memory",
+        "${_SERVICE_MEMORY_SIZE}",
+        "--concurrency",
+        "${_SERVICE_CONCURRENCY}",
+        "--min-instances",
+        "${_SERVICE_MIN_INSTANCES}",
+        "--max-instances",
+        "${_SERVICE_MAX_INSTANCES}",
+        "--set-env-vars=ENVIRONMENT=production,GIN_MODE=release,PORT=8080",
+        "--set-secrets=DATABASE_URL=prod_database-url:latest",
+        "--set-secrets=JWT_SECRET=prod_jwt-secret:latest",
+        "--set-secrets=GOOGLE_CLIENT_ID=prod_google-client-id:latest",
+        "--set-secrets=REVENUECAT_API_KEY=prod_revenuecat-api-key:latest",
+        "--set-secrets=APNS_KEY_ID=prod_apns-key-id:latest",
+        "--set-secrets=APNS_TEAM_ID=prod_apns-team-id:latest",
+        "--set-secrets=APNS_PRIVATE_KEY=prod_apns-private-key:latest",
+        "--set-secrets=APNS_BUNDLE_ID=prod_apns-bundle-id:latest",
+        "--set-secrets=FCM_PROJECT_ID=prod_fcm-project-id:latest",
+        "--set-secrets=FCM_PRIVATE_KEY=prod_fcm-private-key:latest"
+      ]
+images:
+  - "${_IMAGE_NAME}"
+timeout: 1200s
+options:
+  logging: CLOUD_LOGGING_ONLY
+  dynamicSubstitutions: true
+substitutions:
+  _REGION: europe-west1
+  _GAR_ROOT: "europe-west1-docker.pkg.dev/${PROJECT_ID}/jolt-api"
+  _SERVICE_NAME: "jolt-api"
+  _SERVICE_CPU_COUNT: "1"
+  _SERVICE_MEMORY_SIZE: 512Mi
+  _SERVICE_CONCURRENCY: "80"
+  _SERVICE_MIN_INSTANCES: "0"
+  _SERVICE_MAX_INSTANCES: "10"
+  _IMAGE_NAME: "${_GAR_ROOT}/${_SERVICE_NAME}:sha-${SHORT_SHA}"

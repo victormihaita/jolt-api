@@ -1,36 +1,26 @@
-# Build stage
-FROM golang:1.21-alpine AS builder
+# syntax=docker/dockerfile:1
 
-WORKDIR /app
+FROM golang:1.21-alpine
 
-# Install git for fetching dependencies
-RUN apk add --no-cache git
+# Create and change to the app directory
+WORKDIR /usr/src/app
 
-# Copy go mod files
-COPY go.mod go.sum ./
+# Handle dependencies
+COPY go.mod ./
+COPY go.sum ./
 
-# Download dependencies
-RUN go mod download
+RUN go mod download && go mod verify
 
 # Copy source code
-COPY . .
+COPY /cmd ./cmd
+COPY /internal ./internal
+COPY /pkg ./pkg
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o jolt-api ./cmd/api
-
-# Final stage
-FROM alpine:3.19
-
-WORKDIR /app
-
-# Install ca-certificates for HTTPS
-RUN apk --no-cache add ca-certificates tzdata
-
-# Copy binary from builder
-COPY --from=builder /app/jolt-api .
+# Build a static application binary "jolt-api"
+RUN go build -v -o /usr/local/bin/jolt-api ./cmd/api
 
 # Expose port
 EXPOSE 8080
 
-# Run the application
-CMD ["./jolt-api"]
+# Execute jolt-api when the container is started
+CMD [ "jolt-api" ]
