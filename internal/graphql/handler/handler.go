@@ -128,6 +128,11 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 
 	fmt.Printf("executeQuery: opName=%q, query=%q\n", opName, query)
 
+	// Handle introspection queries
+	if strings.Contains(query, "__schema") || strings.Contains(query, "__type") || opName == "introspectionquery" {
+		return GraphQLResponse{Data: getIntrospectionData()}
+	}
+
 	if strings.Contains(query, "me") && (opName == "" || opName == "me" || opName == "getme") {
 		result, err := h.Resolver.Me(ctx)
 		if err != nil {
@@ -449,6 +454,281 @@ var playgroundHTML = `<!DOCTYPE html>
     })</script>
 </body>
 </html>`
+
+// getIntrospectionData returns the schema introspection data
+func getIntrospectionData() map[string]interface{} {
+	return map[string]interface{}{
+		"__schema": map[string]interface{}{
+			"queryType":        map[string]interface{}{"name": "Query"},
+			"mutationType":     map[string]interface{}{"name": "Mutation"},
+			"subscriptionType": map[string]interface{}{"name": "Subscription"},
+			"types":            getSchemaTypes(),
+			"directives":       []interface{}{},
+		},
+	}
+}
+
+func getSchemaTypes() []map[string]interface{} {
+	return []map[string]interface{}{
+		// Scalars
+		{"kind": "SCALAR", "name": "String", "description": "Built-in String"},
+		{"kind": "SCALAR", "name": "Int", "description": "Built-in Int"},
+		{"kind": "SCALAR", "name": "Float", "description": "Built-in Float"},
+		{"kind": "SCALAR", "name": "Boolean", "description": "Built-in Boolean"},
+		{"kind": "SCALAR", "name": "ID", "description": "Built-in ID"},
+		{"kind": "SCALAR", "name": "DateTime", "description": "ISO 8601 datetime"},
+		{"kind": "SCALAR", "name": "UUID", "description": "UUID string"},
+		// Enums
+		{
+			"kind": "ENUM", "name": "Platform", "description": "Device platform",
+			"enumValues": []map[string]interface{}{
+				{"name": "IOS", "description": "iOS platform"},
+				{"name": "ANDROID", "description": "Android platform"},
+			},
+		},
+		{
+			"kind": "ENUM", "name": "Priority", "description": "Reminder priority",
+			"enumValues": []map[string]interface{}{
+				{"name": "NONE", "description": "No priority"},
+				{"name": "LOW", "description": "Low priority"},
+				{"name": "NORMAL", "description": "Normal priority"},
+				{"name": "HIGH", "description": "High priority"},
+			},
+		},
+		{
+			"kind": "ENUM", "name": "ReminderStatus", "description": "Reminder status",
+			"enumValues": []map[string]interface{}{
+				{"name": "ACTIVE", "description": "Active reminder"},
+				{"name": "COMPLETED", "description": "Completed reminder"},
+				{"name": "SNOOZED", "description": "Snoozed reminder"},
+				{"name": "DISMISSED", "description": "Dismissed reminder"},
+			},
+		},
+		{
+			"kind": "ENUM", "name": "Frequency", "description": "Recurrence frequency",
+			"enumValues": []map[string]interface{}{
+				{"name": "HOURLY", "description": "Hourly"},
+				{"name": "DAILY", "description": "Daily"},
+				{"name": "WEEKLY", "description": "Weekly"},
+				{"name": "MONTHLY", "description": "Monthly"},
+				{"name": "YEARLY", "description": "Yearly"},
+			},
+		},
+		{
+			"kind": "ENUM", "name": "ChangeAction", "description": "Subscription change action",
+			"enumValues": []map[string]interface{}{
+				{"name": "CREATED", "description": "Created"},
+				{"name": "UPDATED", "description": "Updated"},
+				{"name": "DELETED", "description": "Deleted"},
+			},
+		},
+		// Objects
+		{
+			"kind": "OBJECT", "name": "User", "description": "User account",
+			"fields": []map[string]interface{}{
+				{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}},
+				{"name": "email", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "displayName", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "avatarUrl", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "timezone", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "isPremium", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "premiumUntil", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "createdAt", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+				{"name": "updatedAt", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+			},
+		},
+		{
+			"kind": "OBJECT", "name": "AuthPayload", "description": "Authentication response",
+			"fields": []map[string]interface{}{
+				{"name": "accessToken", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "refreshToken", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "expiresIn", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}},
+				{"name": "user", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "User"}}},
+			},
+		},
+		{
+			"kind": "OBJECT", "name": "Device", "description": "Registered device",
+			"fields": []map[string]interface{}{
+				{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}},
+				{"name": "platform", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "ENUM", "name": "Platform"}}},
+				{"name": "pushToken", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "deviceName", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "appVersion", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "osVersion", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "lastSeenAt", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+				{"name": "createdAt", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+			},
+		},
+		{
+			"kind": "OBJECT", "name": "Reminder", "description": "Reminder item",
+			"fields": []map[string]interface{}{
+				{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}},
+				{"name": "title", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "notes", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "priority", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "ENUM", "name": "Priority"}}},
+				{"name": "dueAt", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+				{"name": "allDay", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "recurrenceRule", "type": map[string]interface{}{"kind": "OBJECT", "name": "RecurrenceRule"}},
+				{"name": "recurrenceEnd", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "status", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "ENUM", "name": "ReminderStatus"}}},
+				{"name": "completedAt", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "snoozedUntil", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "snoozeCount", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}},
+				{"name": "localId", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "version", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}},
+				{"name": "createdAt", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+				{"name": "updatedAt", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+			},
+		},
+		{
+			"kind": "OBJECT", "name": "RecurrenceRule", "description": "Recurrence rule",
+			"fields": []map[string]interface{}{
+				{"name": "frequency", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "ENUM", "name": "Frequency"}}},
+				{"name": "interval", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}},
+				{"name": "daysOfWeek", "type": map[string]interface{}{"kind": "LIST", "ofType": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}}},
+				{"name": "dayOfMonth", "type": map[string]interface{}{"kind": "SCALAR", "name": "Int"}},
+				{"name": "monthOfYear", "type": map[string]interface{}{"kind": "SCALAR", "name": "Int"}},
+				{"name": "endAfterOccurrences", "type": map[string]interface{}{"kind": "SCALAR", "name": "Int"}},
+				{"name": "endDate", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+			},
+		},
+		{
+			"kind": "OBJECT", "name": "PageInfo", "description": "Pagination info",
+			"fields": []map[string]interface{}{
+				{"name": "hasNextPage", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "hasPreviousPage", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "startCursor", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "endCursor", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+			},
+		},
+		{
+			"kind": "OBJECT", "name": "ReminderConnection", "description": "Paginated reminders",
+			"fields": []map[string]interface{}{
+				{"name": "edges", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "LIST", "ofType": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "ReminderEdge"}}}}},
+				{"name": "pageInfo", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "PageInfo"}}},
+				{"name": "totalCount", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}},
+			},
+		},
+		{
+			"kind": "OBJECT", "name": "ReminderEdge", "description": "Reminder edge",
+			"fields": []map[string]interface{}{
+				{"name": "node", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "Reminder"}}},
+				{"name": "cursor", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+			},
+		},
+		{
+			"kind": "OBJECT", "name": "ReminderChangeEvent", "description": "Subscription event",
+			"fields": []map[string]interface{}{
+				{"name": "action", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "ENUM", "name": "ChangeAction"}}},
+				{"name": "reminder", "type": map[string]interface{}{"kind": "OBJECT", "name": "Reminder"}},
+				{"name": "reminderId", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}},
+				{"name": "timestamp", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+			},
+		},
+		// Input types
+		{
+			"kind": "INPUT_OBJECT", "name": "PaginationInput", "description": "Pagination input",
+			"inputFields": []map[string]interface{}{
+				{"name": "first", "type": map[string]interface{}{"kind": "SCALAR", "name": "Int"}},
+				{"name": "after", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "last", "type": map[string]interface{}{"kind": "SCALAR", "name": "Int"}},
+				{"name": "before", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+			},
+		},
+		{
+			"kind": "INPUT_OBJECT", "name": "RegisterDeviceInput", "description": "Register device input",
+			"inputFields": []map[string]interface{}{
+				{"name": "platform", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "ENUM", "name": "Platform"}}},
+				{"name": "pushToken", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "deviceName", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "appVersion", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "osVersion", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+			},
+		},
+		{
+			"kind": "INPUT_OBJECT", "name": "RecurrenceRuleInput", "description": "Recurrence rule input",
+			"inputFields": []map[string]interface{}{
+				{"name": "frequency", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "ENUM", "name": "Frequency"}}},
+				{"name": "interval", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}},
+				{"name": "daysOfWeek", "type": map[string]interface{}{"kind": "LIST", "ofType": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}}},
+				{"name": "dayOfMonth", "type": map[string]interface{}{"kind": "SCALAR", "name": "Int"}},
+				{"name": "monthOfYear", "type": map[string]interface{}{"kind": "SCALAR", "name": "Int"}},
+				{"name": "endAfterOccurrences", "type": map[string]interface{}{"kind": "SCALAR", "name": "Int"}},
+				{"name": "endDate", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+			},
+		},
+		{
+			"kind": "INPUT_OBJECT", "name": "CreateReminderInput", "description": "Create reminder input",
+			"inputFields": []map[string]interface{}{
+				{"name": "title", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
+				{"name": "notes", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "priority", "type": map[string]interface{}{"kind": "ENUM", "name": "Priority"}},
+				{"name": "dueAt", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}}},
+				{"name": "allDay", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "recurrenceRule", "type": map[string]interface{}{"kind": "INPUT_OBJECT", "name": "RecurrenceRuleInput"}},
+				{"name": "recurrenceEnd", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "localId", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+			},
+		},
+		{
+			"kind": "INPUT_OBJECT", "name": "UpdateReminderInput", "description": "Update reminder input",
+			"inputFields": []map[string]interface{}{
+				{"name": "title", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "notes", "type": map[string]interface{}{"kind": "SCALAR", "name": "String"}},
+				{"name": "priority", "type": map[string]interface{}{"kind": "ENUM", "name": "Priority"}},
+				{"name": "dueAt", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "allDay", "type": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}},
+				{"name": "recurrenceRule", "type": map[string]interface{}{"kind": "INPUT_OBJECT", "name": "RecurrenceRuleInput"}},
+				{"name": "recurrenceEnd", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "status", "type": map[string]interface{}{"kind": "ENUM", "name": "ReminderStatus"}},
+			},
+		},
+		{
+			"kind": "INPUT_OBJECT", "name": "ReminderFilter", "description": "Reminder filter",
+			"inputFields": []map[string]interface{}{
+				{"name": "status", "type": map[string]interface{}{"kind": "ENUM", "name": "ReminderStatus"}},
+				{"name": "fromDate", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "toDate", "type": map[string]interface{}{"kind": "SCALAR", "name": "DateTime"}},
+				{"name": "priority", "type": map[string]interface{}{"kind": "ENUM", "name": "Priority"}},
+			},
+		},
+		// Query type
+		{
+			"kind": "OBJECT", "name": "Query", "description": "Root query type",
+			"fields": []map[string]interface{}{
+				{"name": "me", "description": "Get current user", "args": []interface{}{}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "User"}}},
+				{"name": "reminder", "description": "Get reminder by ID", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}}, "type": map[string]interface{}{"kind": "OBJECT", "name": "Reminder"}},
+				{"name": "reminders", "description": "Get reminders", "args": []map[string]interface{}{{"name": "filter", "type": map[string]interface{}{"kind": "INPUT_OBJECT", "name": "ReminderFilter"}}, {"name": "pagination", "type": map[string]interface{}{"kind": "INPUT_OBJECT", "name": "PaginationInput"}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "ReminderConnection"}}},
+				{"name": "devices", "description": "Get user devices", "args": []interface{}{}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "LIST", "ofType": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "Device"}}}}},
+			},
+		},
+		// Mutation type
+		{
+			"kind": "OBJECT", "name": "Mutation", "description": "Root mutation type",
+			"fields": []map[string]interface{}{
+				{"name": "authenticateWithGoogle", "description": "Authenticate with Google", "args": []map[string]interface{}{{"name": "idToken", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "AuthPayload"}}},
+				{"name": "refreshToken", "description": "Refresh access token", "args": []map[string]interface{}{{"name": "refreshToken", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "AuthPayload"}}},
+				{"name": "logout", "description": "Logout", "args": []interface{}{}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "verifySubscription", "description": "Verify subscription", "args": []interface{}{}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "User"}}},
+				{"name": "createReminder", "description": "Create reminder", "args": []map[string]interface{}{{"name": "input", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "INPUT_OBJECT", "name": "CreateReminderInput"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "Reminder"}}},
+				{"name": "updateReminder", "description": "Update reminder", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}, {"name": "input", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "INPUT_OBJECT", "name": "UpdateReminderInput"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "Reminder"}}},
+				{"name": "deleteReminder", "description": "Delete reminder", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "snoozeReminder", "description": "Snooze reminder", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}, {"name": "minutes", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "Reminder"}}},
+				{"name": "completeReminder", "description": "Complete reminder", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "Reminder"}}},
+				{"name": "dismissReminder", "description": "Dismiss reminder", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "registerDevice", "description": "Register device", "args": []map[string]interface{}{{"name": "input", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "INPUT_OBJECT", "name": "RegisterDeviceInput"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "Device"}}},
+				{"name": "unregisterDevice", "description": "Unregister device", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+			},
+		},
+		// Subscription type
+		{
+			"kind": "OBJECT", "name": "Subscription", "description": "Root subscription type",
+			"fields": []map[string]interface{}{
+				{"name": "reminderChanged", "description": "Subscribe to reminder changes", "args": []interface{}{}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "ReminderChangeEvent"}}},
+			},
+		},
+	}
+}
 
 // WebSocket upgrader for graphql-ws protocol
 var upgrader = websocket.Upgrader{
