@@ -1,0 +1,219 @@
+# Jolt GraphQL API Schema
+# Combined schema for backend server
+
+# Custom scalar types
+scalar DateTime
+scalar UUID
+
+# Pagination input
+input PaginationInput {
+  first: Int
+  after: String
+  last: Int
+  before: String
+}
+
+# Page info for cursor-based pagination
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+# User types
+type User {
+  id: UUID!
+  email: String!
+  displayName: String!
+  avatarUrl: String
+  timezone: String!
+  isPremium: Boolean!
+  premiumUntil: DateTime
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type AuthPayload {
+  accessToken: String!
+  refreshToken: String!
+  expiresIn: Int!
+  user: User!
+}
+
+# Device types
+enum Platform {
+  IOS
+  ANDROID
+}
+
+type Device {
+  id: UUID!
+  platform: Platform!
+  pushToken: String!
+  deviceName: String
+  appVersion: String
+  osVersion: String
+  lastSeenAt: DateTime!
+  createdAt: DateTime!
+}
+
+input RegisterDeviceInput {
+  platform: Platform!
+  pushToken: String!
+  deviceName: String
+  appVersion: String
+  osVersion: String
+}
+
+# Reminder types
+enum Priority {
+  NONE
+  LOW
+  NORMAL
+  HIGH
+}
+
+enum ReminderStatus {
+  ACTIVE
+  COMPLETED
+  SNOOZED
+  DISMISSED
+}
+
+enum Frequency {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+type RecurrenceRule {
+  frequency: Frequency!
+  interval: Int!
+  daysOfWeek: [Int!]
+  dayOfMonth: Int
+  monthOfYear: Int
+  endAfterOccurrences: Int
+  endDate: DateTime
+}
+
+input RecurrenceRuleInput {
+  frequency: Frequency!
+  interval: Int!
+  daysOfWeek: [Int!]
+  dayOfMonth: Int
+  monthOfYear: Int
+  endAfterOccurrences: Int
+  endDate: DateTime
+}
+
+type Reminder {
+  id: UUID!
+  title: String!
+  notes: String
+  priority: Priority!
+  dueAt: DateTime!
+  allDay: Boolean!
+  recurrenceRule: RecurrenceRule
+  recurrenceEnd: DateTime
+  status: ReminderStatus!
+  completedAt: DateTime
+  snoozedUntil: DateTime
+  snoozeCount: Int!
+  localId: String
+  version: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+# Input types
+input CreateReminderInput {
+  title: String!
+  notes: String
+  priority: Priority
+  dueAt: DateTime!
+  allDay: Boolean!
+  recurrenceRule: RecurrenceRuleInput
+  recurrenceEnd: DateTime
+  localId: String
+}
+
+input UpdateReminderInput {
+  title: String
+  notes: String
+  priority: Priority
+  dueAt: DateTime
+  allDay: Boolean
+  recurrenceRule: RecurrenceRuleInput
+  recurrenceEnd: DateTime
+  status: ReminderStatus
+}
+
+input ReminderFilter {
+  status: ReminderStatus
+  fromDate: DateTime
+  toDate: DateTime
+  priority: Priority
+}
+
+# Connection types for pagination
+type ReminderConnection {
+  edges: [ReminderEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ReminderEdge {
+  node: Reminder!
+  cursor: String!
+}
+
+# Subscription types
+enum ChangeAction {
+  CREATED
+  UPDATED
+  DELETED
+}
+
+type ReminderChangeEvent {
+  action: ChangeAction!
+  reminder: Reminder
+  reminderId: UUID!
+  timestamp: DateTime!
+}
+
+# Root types
+type Query {
+  me: User!
+  reminder(id: UUID!): Reminder
+  reminders(filter: ReminderFilter, pagination: PaginationInput): ReminderConnection!
+  devices: [Device!]!
+}
+
+type Mutation {
+  # Authentication
+  authenticateWithGoogle(idToken: String!): AuthPayload!
+  refreshToken(refreshToken: String!): AuthPayload!
+  logout: Boolean!
+
+  # Subscription
+  verifySubscription: User!
+
+  # Reminders
+  createReminder(input: CreateReminderInput!): Reminder!
+  updateReminder(id: UUID!, input: UpdateReminderInput!): Reminder!
+  deleteReminder(id: UUID!): Boolean!
+  snoozeReminder(id: UUID!, minutes: Int!): Reminder!
+  completeReminder(id: UUID!): Reminder!
+  dismissReminder(id: UUID!): Boolean!
+
+  # Devices
+  registerDevice(input: RegisterDeviceInput!): Device!
+  unregisterDevice(id: UUID!): Boolean!
+}
+
+type Subscription {
+  reminderChanged: ReminderChangeEvent!
+}

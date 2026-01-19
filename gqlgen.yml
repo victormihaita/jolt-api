@@ -1,0 +1,62 @@
+# gqlgen configuration
+# https://gqlgen.com/config/
+
+schema:
+  - internal/graphql/schema/*.graphqls
+
+exec:
+  filename: internal/graphql/generated/generated.go
+  package: generated
+
+model:
+  filename: internal/graphql/model/models_gen.go
+  package: model
+
+resolver:
+  layout: follow-schema
+  dir: internal/graphql/resolver
+  package: resolver
+  filename_template: "{name}.resolvers.go"
+
+autobind:
+  - github.com/user/remind-me/backend/internal/models
+
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.ID
+  UUID:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.UUID
+  DateTime:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.DateTime
+  User:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.User
+  Reminder:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.Reminder
+  Device:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.Device
+  RecurrenceRule:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.RecurrenceRule
+  AuthPayload:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.AuthPayload
+  ReminderChangeEvent:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.ReminderChangeEvent
+  ReminderConnection:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.ReminderConnection
+  ReminderEdge:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.ReminderEdge
+  PageInfo:
+    model:
+      - github.com/user/remind-me/backend/internal/graphql/model.PageInfo
+
+omit_slice_element_pointers: true
