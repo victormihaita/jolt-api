@@ -211,7 +211,13 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		keys = append(keys, k)
 	}
 	fmt.Printf("executeQuery response: data keys=%v, errors=%d\n", keys, len(errs))
-	return GraphQLResponse{Data: data, Errors: errs}
+
+	// Debug: print full response JSON
+	resp := GraphQLResponse{Data: data, Errors: errs}
+	respJSON, _ := json.MarshalIndent(resp, "", "  ")
+	fmt.Printf("executeQuery full response JSON:\n%s\n", string(respJSON))
+
+	return resp
 }
 
 // executeMutation handles mutation operations
