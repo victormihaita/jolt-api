@@ -133,7 +133,9 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		return GraphQLResponse{Data: getIntrospectionData()}
 	}
 
-	if strings.Contains(query, "me") && (opName == "" || opName == "me" || opName == "getme") {
+	// Check for "me" query - match by operation name to avoid false positives
+	// "reminders" contains "me" so we can't just use strings.Contains
+	if opName == "me" || opName == "getme" {
 		result, err := h.Resolver.Me(ctx)
 		if err != nil {
 			fmt.Printf("Me query error: %v\n", err)
@@ -146,7 +148,7 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		}
 	}
 
-	if strings.Contains(query, "devices") && (opName == "" || opName == "devices" || opName == "getdevices") {
+	if opName == "devices" || opName == "getdevices" {
 		result, err := h.Resolver.Devices(ctx)
 		if err != nil {
 			errs = append(errs, errorToGraphQLError(err))
@@ -157,7 +159,7 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		}
 	}
 
-	if strings.Contains(query, "reminder(") || strings.Contains(query, "reminder (") {
+	if opName == "reminder" || opName == "getreminder" {
 		if idVar, ok := req.Variables["id"]; ok {
 			if idStr, ok := idVar.(string); ok {
 				id, err := uuid.Parse(idStr)
@@ -174,7 +176,7 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		}
 	}
 
-	if strings.Contains(query, "reminders") && !strings.Contains(query, "reminder(") {
+	if opName == "reminders" || opName == "getreminders" {
 		var filter *model.ReminderFilter
 		var pagination *model.PaginationInput
 
