@@ -27,21 +27,23 @@ func (e *AppError) Unwrap() error {
 
 // Error codes
 const (
-	CodeBadRequest          = "BAD_REQUEST"
-	CodeUnauthorized        = "UNAUTHORIZED"
-	CodeForbidden           = "FORBIDDEN"
-	CodeNotFound            = "NOT_FOUND"
-	CodeConflict            = "CONFLICT"
-	CodeInternalError       = "INTERNAL_ERROR"
-	CodeValidationError     = "VALIDATION_ERROR"
-	CodeTokenExpired        = "TOKEN_EXPIRED"
-	CodeInvalidToken        = "INVALID_TOKEN"
-	CodeDeviceNotFound      = "DEVICE_NOT_FOUND"
-	CodeReminderNotFound    = "REMINDER_NOT_FOUND"
-	CodeUserNotFound        = "USER_NOT_FOUND"
-	CodeSyncConflict        = "SYNC_CONFLICT"
-	CodePremiumRequired     = "PREMIUM_REQUIRED"
-	CodeDeviceLimitExceeded = "DEVICE_LIMIT_EXCEEDED"
+	CodeBadRequest              = "BAD_REQUEST"
+	CodeUnauthorized            = "UNAUTHORIZED"
+	CodeForbidden               = "FORBIDDEN"
+	CodeNotFound                = "NOT_FOUND"
+	CodeConflict                = "CONFLICT"
+	CodeInternalError           = "INTERNAL_ERROR"
+	CodeValidationError         = "VALIDATION_ERROR"
+	CodeTokenExpired            = "TOKEN_EXPIRED"
+	CodeInvalidToken            = "INVALID_TOKEN"
+	CodeDeviceNotFound          = "DEVICE_NOT_FOUND"
+	CodeReminderNotFound        = "REMINDER_NOT_FOUND"
+	CodeReminderListNotFound    = "REMINDER_LIST_NOT_FOUND"
+	CodeUserNotFound            = "USER_NOT_FOUND"
+	CodeSyncConflict            = "SYNC_CONFLICT"
+	CodePremiumRequired         = "PREMIUM_REQUIRED"
+	CodeDeviceLimitExceeded     = "DEVICE_LIMIT_EXCEEDED"
+	CodeCannotDeleteDefaultList = "CANNOT_DELETE_DEFAULT_LIST"
 )
 
 // Common errors
@@ -115,6 +117,18 @@ var (
 	ErrDeviceLimitExceeded = &AppError{
 		Code:       CodeDeviceLimitExceeded,
 		Message:    "Device limit exceeded. Upgrade to premium for unlimited devices.",
+		StatusCode: http.StatusForbidden,
+	}
+
+	ErrReminderListNotFound = &AppError{
+		Code:       CodeReminderListNotFound,
+		Message:    "Reminder list not found",
+		StatusCode: http.StatusNotFound,
+	}
+
+	ErrCannotDeleteDefaultList = &AppError{
+		Code:       CodeCannotDeleteDefaultList,
+		Message:    "Cannot delete the default list",
 		StatusCode: http.StatusForbidden,
 	}
 )

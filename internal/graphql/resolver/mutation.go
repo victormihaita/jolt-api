@@ -101,6 +101,7 @@ func (r *Resolver) CreateReminder(ctx context.Context, input model.CreateReminde
 	}
 
 	req := dto.CreateReminderRequest{
+		ListID:         input.ListID,
 		Title:          input.Title,
 		Notes:          input.Notes,
 		Priority:       priority,
@@ -108,6 +109,7 @@ func (r *Resolver) CreateReminder(ctx context.Context, input model.CreateReminde
 		AllDay:         input.AllDay,
 		RecurrenceRule: model.RecurrenceRuleToModel(input.RecurrenceRule),
 		RecurrenceEnd:  input.RecurrenceEnd,
+		Tags:           input.Tags,
 		LocalID:        input.LocalID,
 	}
 
@@ -146,6 +148,7 @@ func (r *Resolver) UpdateReminder(ctx context.Context, id uuid.UUID, input model
 	}
 
 	req := dto.UpdateReminderRequest{
+		ListID:         input.ListID,
 		Title:          input.Title,
 		Notes:          input.Notes,
 		Priority:       priority,
@@ -154,6 +157,7 @@ func (r *Resolver) UpdateReminder(ctx context.Context, id uuid.UUID, input model
 		RecurrenceRule: model.RecurrenceRuleToModel(input.RecurrenceRule),
 		RecurrenceEnd:  input.RecurrenceEnd,
 		Status:         status,
+		Tags:           input.Tags,
 	}
 
 	reminderDTO, err := r.ReminderService.Update(userID, id, req, deviceID)

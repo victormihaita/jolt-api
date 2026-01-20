@@ -66,6 +66,44 @@ input RegisterDeviceInput {
   osVersion: String
 }
 
+# ReminderList types
+type ReminderList {
+  id: UUID!
+  name: String!
+  colorHex: String!
+  iconName: String!
+  sortOrder: Int!
+  isDefault: Boolean!
+  reminderCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input CreateReminderListInput {
+  name: String!
+  colorHex: String
+  iconName: String
+}
+
+input UpdateReminderListInput {
+  name: String
+  colorHex: String
+  iconName: String
+  sortOrder: Int
+}
+
+# Connection types for lists
+type ReminderListConnection {
+  edges: [ReminderListEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type ReminderListEdge {
+  node: ReminderList!
+  cursor: String!
+}
+
 # Reminder types
 enum Priority {
   NONE
@@ -111,6 +149,8 @@ input RecurrenceRuleInput {
 
 type Reminder {
   id: UUID!
+  listId: UUID
+  list: ReminderList
   title: String!
   notes: String
   priority: Priority!
@@ -122,6 +162,7 @@ type Reminder {
   completedAt: DateTime
   snoozedUntil: DateTime
   snoozeCount: Int!
+  tags: [String!]!
   localId: String
   version: Int!
   createdAt: DateTime!
@@ -130,6 +171,7 @@ type Reminder {
 
 # Input types
 input CreateReminderInput {
+  listId: UUID
   title: String!
   notes: String
   priority: Priority
@@ -137,10 +179,12 @@ input CreateReminderInput {
   allDay: Boolean!
   recurrenceRule: RecurrenceRuleInput
   recurrenceEnd: DateTime
+  tags: [String!]
   localId: String
 }
 
 input UpdateReminderInput {
+  listId: UUID
   title: String
   notes: String
   priority: Priority
@@ -149,13 +193,16 @@ input UpdateReminderInput {
   recurrenceRule: RecurrenceRuleInput
   recurrenceEnd: DateTime
   status: ReminderStatus
+  tags: [String!]
 }
 
 input ReminderFilter {
+  listId: UUID
   status: ReminderStatus
   fromDate: DateTime
   toDate: DateTime
   priority: Priority
+  tags: [String!]
 }
 
 # Connection types for pagination
@@ -184,11 +231,20 @@ type ReminderChangeEvent {
   timestamp: DateTime!
 }
 
+type ReminderListChangeEvent {
+  action: ChangeAction!
+  reminderList: ReminderList
+  reminderListId: UUID!
+  timestamp: DateTime!
+}
+
 # Root types
 type Query {
   me: User!
   reminder(id: UUID!): Reminder
   reminders(filter: ReminderFilter, pagination: PaginationInput): ReminderConnection!
+  reminderList(id: UUID!): ReminderList
+  reminderLists: [ReminderList!]!
   devices: [Device!]!
 }
 
@@ -201,6 +257,12 @@ type Mutation {
   # Subscription
   verifySubscription: User!
 
+  # Reminder Lists
+  createReminderList(input: CreateReminderListInput!): ReminderList!
+  updateReminderList(id: UUID!, input: UpdateReminderListInput!): ReminderList!
+  deleteReminderList(id: UUID!): Boolean!
+  reorderReminderLists(ids: [UUID!]!): [ReminderList!]!
+
   # Reminders
   createReminder(input: CreateReminderInput!): Reminder!
   updateReminder(id: UUID!, input: UpdateReminderInput!): Reminder!
@@ -208,6 +270,7 @@ type Mutation {
   snoozeReminder(id: UUID!, minutes: Int!): Reminder!
   completeReminder(id: UUID!): Reminder!
   dismissReminder(id: UUID!): Boolean!
+  moveReminderToList(reminderId: UUID!, listId: UUID!): Reminder!
 
   # Devices
   registerDevice(input: RegisterDeviceInput!): Device!
@@ -216,4 +279,5 @@ type Mutation {
 
 type Subscription {
   reminderChanged: ReminderChangeEvent!
+  reminderListChanged: ReminderListChangeEvent!
 }

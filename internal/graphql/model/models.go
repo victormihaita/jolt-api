@@ -358,10 +358,44 @@ type RecurrenceRuleInput struct {
 	EndDate              *time.Time `json:"endDate"`
 }
 
+// ReminderList type
+type ReminderList struct {
+	TypeName      string    `json:"__typename"`
+	ID            uuid.UUID `json:"id"`
+	Name          string    `json:"name"`
+	ColorHex      string    `json:"colorHex"`
+	IconName      string    `json:"iconName"`
+	SortOrder     int       `json:"sortOrder"`
+	IsDefault     bool      `json:"isDefault"`
+	ReminderCount int       `json:"reminderCount"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+}
+
+func ReminderListFromModel(l *models.ReminderList, reminderCount int64) *ReminderList {
+	if l == nil {
+		return nil
+	}
+	return &ReminderList{
+		TypeName:      "ReminderList",
+		ID:            l.ID,
+		Name:          l.Name,
+		ColorHex:      l.ColorHex,
+		IconName:      l.IconName,
+		SortOrder:     l.SortOrder,
+		IsDefault:     l.IsDefault,
+		ReminderCount: int(reminderCount),
+		CreatedAt:     l.CreatedAt,
+		UpdatedAt:     l.UpdatedAt,
+	}
+}
+
 // Reminder type
 type Reminder struct {
 	TypeName       string          `json:"__typename"`
 	ID             uuid.UUID       `json:"id"`
+	ListID         *uuid.UUID      `json:"listId"`
+	List           *ReminderList   `json:"list"`
 	Title          string          `json:"title"`
 	Notes          *string         `json:"notes"`
 	Priority       Priority        `json:"priority"`
@@ -373,6 +407,7 @@ type Reminder struct {
 	CompletedAt    *time.Time      `json:"completedAt"`
 	SnoozedUntil   *time.Time      `json:"snoozedUntil"`
 	SnoozeCount    int             `json:"snoozeCount"`
+	Tags           []string        `json:"tags"`
 	LocalID        *string         `json:"localId"`
 	Version        int             `json:"version"`
 	CreatedAt      time.Time       `json:"createdAt"`
@@ -383,9 +418,14 @@ func ReminderFromModel(r *models.Reminder) *Reminder {
 	if r == nil {
 		return nil
 	}
+	tags := r.Tags
+	if tags == nil {
+		tags = []string{}
+	}
 	return &Reminder{
 		TypeName:       "Reminder",
 		ID:             r.ID,
+		ListID:         r.ListID,
 		Title:          r.Title,
 		Notes:          r.Notes,
 		Priority:       PriorityFromModel(r.Priority),
@@ -397,6 +437,7 @@ func ReminderFromModel(r *models.Reminder) *Reminder {
 		CompletedAt:    r.CompletedAt,
 		SnoozedUntil:   r.SnoozedUntil,
 		SnoozeCount:    r.SnoozeCount,
+		Tags:           tags,
 		LocalID:        r.LocalID,
 		Version:        r.Version,
 		CreatedAt:      r.CreatedAt,
@@ -406,6 +447,7 @@ func ReminderFromModel(r *models.Reminder) *Reminder {
 
 // Input types
 type CreateReminderInput struct {
+	ListID         *uuid.UUID           `json:"listId"`
 	Title          string               `json:"title"`
 	Notes          *string              `json:"notes"`
 	Priority       *Priority            `json:"priority"`
@@ -413,10 +455,12 @@ type CreateReminderInput struct {
 	AllDay         bool                 `json:"allDay"`
 	RecurrenceRule *RecurrenceRuleInput `json:"recurrenceRule"`
 	RecurrenceEnd  *time.Time           `json:"recurrenceEnd"`
+	Tags           []string             `json:"tags"`
 	LocalID        *string              `json:"localId"`
 }
 
 type UpdateReminderInput struct {
+	ListID         *uuid.UUID           `json:"listId"`
 	Title          *string              `json:"title"`
 	Notes          *string              `json:"notes"`
 	Priority       *Priority            `json:"priority"`
@@ -425,13 +469,39 @@ type UpdateReminderInput struct {
 	RecurrenceRule *RecurrenceRuleInput `json:"recurrenceRule"`
 	RecurrenceEnd  *time.Time           `json:"recurrenceEnd"`
 	Status         *ReminderStatus      `json:"status"`
+	Tags           []string             `json:"tags"`
 }
 
 type ReminderFilter struct {
+	ListID   *uuid.UUID      `json:"listId"`
 	Status   *ReminderStatus `json:"status"`
 	FromDate *time.Time      `json:"fromDate"`
 	ToDate   *time.Time      `json:"toDate"`
 	Priority *Priority       `json:"priority"`
+	Tags     []string        `json:"tags"`
+}
+
+// ReminderList input types
+type CreateReminderListInput struct {
+	Name     string  `json:"name"`
+	ColorHex *string `json:"colorHex"`
+	IconName *string `json:"iconName"`
+}
+
+type UpdateReminderListInput struct {
+	Name      *string `json:"name"`
+	ColorHex  *string `json:"colorHex"`
+	IconName  *string `json:"iconName"`
+	SortOrder *int    `json:"sortOrder"`
+}
+
+// ReminderList change event
+type ReminderListChangeEvent struct {
+	TypeName       string        `json:"__typename"`
+	Action         ChangeAction  `json:"action"`
+	ReminderList   *ReminderList `json:"reminderList"`
+	ReminderListID uuid.UUID     `json:"reminderListId"`
+	Timestamp      time.Time     `json:"timestamp"`
 }
 
 type PaginationInput struct {

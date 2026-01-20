@@ -40,17 +40,20 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	deviceRepo := repository.NewDeviceRepository(db)
 	reminderRepo := repository.NewReminderRepository(db)
+	reminderListRepo := repository.NewReminderListRepository(db)
 	syncRepo := repository.NewSyncRepository(db)
 
 	// Initialize services
 	authService := service.NewAuthService(userRepo, jwtManager)
 	reminderService := service.NewReminderService(reminderRepo, syncRepo, userRepo)
+	reminderListService := service.NewReminderListService(reminderListRepo, reminderRepo)
 	subscriptionService := service.NewSubscriptionService(cfg, userRepo)
 
 	// Initialize GraphQL resolver
 	gqlResolver := resolver.NewResolver(
 		authService,
 		reminderService,
+		reminderListService,
 		subscriptionService,
 		userRepo,
 		deviceRepo,

@@ -50,6 +50,7 @@ func AutoMigrate(db *gorm.DB) error {
 	return db.AutoMigrate(
 		&models.User{},
 		&models.Device{},
+		&models.ReminderList{},
 		&models.Reminder{},
 		&models.ReminderInstance{},
 		&models.SyncEvent{},

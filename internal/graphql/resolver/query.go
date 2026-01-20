@@ -224,9 +224,15 @@ func dtoToReminder(d *dto.ReminderDTO) *model.Reminder {
 		}
 	}
 
+	tags := []string(d.Tags)
+	if tags == nil {
+		tags = []string{}
+	}
+
 	return &model.Reminder{
 		TypeName:       "Reminder",
 		ID:             d.ID,
+		ListID:         d.ListID,
 		Title:          d.Title,
 		Notes:          d.Notes,
 		Priority:       priority,
@@ -238,6 +244,7 @@ func dtoToReminder(d *dto.ReminderDTO) *model.Reminder {
 		CompletedAt:    d.CompletedAt,
 		SnoozedUntil:   d.SnoozedUntil,
 		SnoozeCount:    d.SnoozeCount,
+		Tags:           tags,
 		LocalID:        d.LocalID,
 		Version:        d.Version,
 		CreatedAt:      d.CreatedAt,

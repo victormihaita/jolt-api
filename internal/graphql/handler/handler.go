@@ -237,6 +237,37 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		}
 	}
 
+	// ReminderList query - get single list by ID
+	if opName == "reminderlist" || opName == "getreminderlist" {
+		if idVar, ok := req.Variables["id"]; ok {
+			if idStr, ok := idVar.(string); ok {
+				id, err := uuid.Parse(idStr)
+				if err == nil {
+					result, err := h.Resolver.ReminderList(ctx, id)
+					if err != nil {
+						errs = append(errs, errorToGraphQLError(err))
+						data["reminderList"] = nil
+					} else {
+						data["reminderList"] = result
+					}
+				}
+			}
+		}
+	}
+
+	// ReminderLists query - get all lists for current user
+	if opName == "reminderlists" || opName == "getreminderlists" {
+		result, err := h.Resolver.ReminderLists(ctx)
+		if err != nil {
+			fmt.Printf("ReminderLists query error: %v\n", err)
+			errs = append(errs, errorToGraphQLError(err))
+			return GraphQLResponse{Data: nil, Errors: errs}
+		} else {
+			fmt.Printf("ReminderLists query result: %d lists\n", len(result))
+			data["reminderLists"] = result
+		}
+	}
+
 	// Per GraphQL spec: if any error occurs on a non-nullable field,
 	// data should be null. We handle this case above for reminders.
 	keys := make([]string, 0, len(data))
@@ -314,7 +345,7 @@ func (h *Handler) executeMutation(ctx context.Context, req GraphQLRequest) Graph
 		}
 	}
 
-	if strings.Contains(query, "createreminder") {
+	if strings.Contains(query, "createreminder") && !strings.Contains(query, "createreminderlist") {
 		var input model.CreateReminderInput
 		if inputVar, ok := req.Variables["input"]; ok {
 			inputBytes, _ := json.Marshal(inputVar)
@@ -336,7 +367,7 @@ func (h *Handler) executeMutation(ctx context.Context, req GraphQLRequest) Graph
 		}
 	}
 
-	if strings.Contains(query, "updatereminder") {
+	if strings.Contains(query, "updatereminder") && !strings.Contains(query, "updatereminderlist") {
 		fmt.Printf("UpdateReminder mutation detected\n")
 		idStr, _ := req.Variables["id"].(string)
 		fmt.Printf("UpdateReminder id: %q\n", idStr)
@@ -369,7 +400,7 @@ func (h *Handler) executeMutation(ctx context.Context, req GraphQLRequest) Graph
 		}
 	}
 
-	if strings.Contains(query, "deletereminder") {
+	if strings.Contains(query, "deletereminder") && !strings.Contains(query, "deletereminderlist") {
 		idStr, _ := req.Variables["id"].(string)
 		id, _ := uuid.Parse(idStr)
 		result, err := h.Resolver.DeleteReminder(ctx, id)
@@ -430,6 +461,86 @@ func (h *Handler) executeMutation(ctx context.Context, req GraphQLRequest) Graph
 			// Don't set data for non-nullable return type on error
 		} else {
 			data["registerDevice"] = result
+		}
+	}
+
+	// ReminderList mutations
+	if strings.Contains(query, "createreminderlist") {
+		var input model.CreateReminderListInput
+		if inputVar, ok := req.Variables["input"]; ok {
+			inputBytes, _ := json.Marshal(inputVar)
+			json.Unmarshal(inputBytes, &input)
+		}
+		result, err := h.Resolver.CreateReminderList(ctx, input)
+		if err != nil {
+			fmt.Printf("CreateReminderList error: %v\n", err)
+			errs = append(errs, errorToGraphQLError(err))
+		} else {
+			data["createReminderList"] = result
+		}
+	}
+
+	if strings.Contains(query, "updatereminderlist") {
+		idStr, _ := req.Variables["id"].(string)
+		id, _ := uuid.Parse(idStr)
+		var input model.UpdateReminderListInput
+		if inputVar, ok := req.Variables["input"]; ok {
+			inputBytes, _ := json.Marshal(inputVar)
+			json.Unmarshal(inputBytes, &input)
+		}
+		result, err := h.Resolver.UpdateReminderList(ctx, id, input)
+		if err != nil {
+			fmt.Printf("UpdateReminderList error: %v\n", err)
+			errs = append(errs, errorToGraphQLError(err))
+		} else {
+			data["updateReminderList"] = result
+		}
+	}
+
+	if strings.Contains(query, "deletereminderlist") {
+		idStr, _ := req.Variables["id"].(string)
+		id, _ := uuid.Parse(idStr)
+		result, err := h.Resolver.DeleteReminderList(ctx, id)
+		if err != nil {
+			fmt.Printf("DeleteReminderList error: %v\n", err)
+			errs = append(errs, errorToGraphQLError(err))
+			data["deleteReminderList"] = false
+		} else {
+			data["deleteReminderList"] = result
+		}
+	}
+
+	if strings.Contains(query, "reorderreminderlists") {
+		var ids []uuid.UUID
+		if idsVar, ok := req.Variables["ids"].([]interface{}); ok {
+			for _, idVar := range idsVar {
+				if idStr, ok := idVar.(string); ok {
+					if id, err := uuid.Parse(idStr); err == nil {
+						ids = append(ids, id)
+					}
+				}
+			}
+		}
+		result, err := h.Resolver.ReorderReminderLists(ctx, ids)
+		if err != nil {
+			fmt.Printf("ReorderReminderLists error: %v\n", err)
+			errs = append(errs, errorToGraphQLError(err))
+		} else {
+			data["reorderReminderLists"] = result
+		}
+	}
+
+	if strings.Contains(query, "moveremindertolist") {
+		reminderIDStr, _ := req.Variables["reminderId"].(string)
+		reminderID, _ := uuid.Parse(reminderIDStr)
+		listIDStr, _ := req.Variables["listId"].(string)
+		listID, _ := uuid.Parse(listIDStr)
+		result, err := h.Resolver.MoveReminderToList(ctx, reminderID, listID)
+		if err != nil {
+			fmt.Printf("MoveReminderToList error: %v\n", err)
+			errs = append(errs, errorToGraphQLError(err))
+		} else {
+			data["moveReminderToList"] = result
 		}
 	}
 

@@ -4,11 +4,105 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+// StringArray is a custom type for PostgreSQL text[] arrays
+type StringArray []string
+
+// Value implements driver.Valuer for PostgreSQL text[] storage
+func (a StringArray) Value() (driver.Value, error) {
+	if a == nil {
+		return "{}", nil
+	}
+	if len(a) == 0 {
+		return "{}", nil
+	}
+	// Format as PostgreSQL array literal: {elem1,elem2,elem3}
+	escaped := make([]string, len(a))
+	for i, s := range a {
+		// Escape quotes and backslashes, wrap in quotes if contains special chars
+		if strings.ContainsAny(s, ",{}\"\\") || strings.ContainsAny(s, " \t\n") {
+			s = strings.ReplaceAll(s, "\\", "\\\\")
+			s = strings.ReplaceAll(s, "\"", "\\\"")
+			escaped[i] = "\"" + s + "\""
+		} else {
+			escaped[i] = s
+		}
+	}
+	return "{" + strings.Join(escaped, ",") + "}", nil
+}
+
+// Scan implements sql.Scanner for PostgreSQL text[] storage
+func (a *StringArray) Scan(value interface{}) error {
+	if value == nil {
+		*a = StringArray{}
+		return nil
+	}
+
+	var str string
+	switch v := value.(type) {
+	case []byte:
+		str = string(v)
+	case string:
+		str = v
+	default:
+		return errors.New("failed to scan StringArray: unsupported type")
+	}
+
+	// Parse PostgreSQL array literal: {elem1,elem2,elem3}
+	str = strings.TrimSpace(str)
+	if str == "{}" || str == "" {
+		*a = StringArray{}
+		return nil
+	}
+
+	// Remove surrounding braces
+	if len(str) < 2 || str[0] != '{' || str[len(str)-1] != '}' {
+		return errors.New("invalid PostgreSQL array format")
+	}
+	str = str[1 : len(str)-1]
+
+	// Parse elements (handling quoted strings)
+	var result []string
+	var current strings.Builder
+	inQuotes := false
+	escaped := false
+
+	for i := 0; i < len(str); i++ {
+		c := str[i]
+		if escaped {
+			current.WriteByte(c)
+			escaped = false
+			continue
+		}
+		if c == '\\' {
+			escaped = true
+			continue
+		}
+		if c == '"' {
+			inQuotes = !inQuotes
+			continue
+		}
+		if c == ',' && !inQuotes {
+			result = append(result, current.String())
+			current.Reset()
+			continue
+		}
+		current.WriteByte(c)
+	}
+	// Don't forget the last element
+	if current.Len() > 0 || len(result) > 0 {
+		result = append(result, current.String())
+	}
+
+	*a = result
+	return nil
+}
 
 type ReminderStatus string
 
@@ -69,6 +163,7 @@ func (r *RecurrenceRule) Scan(value interface{}) error {
 type Reminder struct {
 	ID             uuid.UUID       `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
 	UserID         uuid.UUID       `gorm:"type:uuid;not null;index" json:"user_id"`
+	ListID         *uuid.UUID      `gorm:"type:uuid;index" json:"list_id,omitempty"` // Optional: belongs to a list
 	Title          string          `gorm:"size:500;not null" json:"title"`
 	Notes          *string         `json:"notes,omitempty"`
 	Priority       Priority        `gorm:"default:0" json:"priority"`
@@ -80,6 +175,7 @@ type Reminder struct {
 	CompletedAt    *time.Time      `json:"completed_at,omitempty"`
 	SnoozedUntil   *time.Time      `json:"snoozed_until,omitempty"`
 	SnoozeCount    int             `gorm:"default:0" json:"snooze_count"`
+	Tags           StringArray     `gorm:"type:text[];default:'{}'" json:"tags,omitempty"` // Tags for cross-list filtering
 	LocalID        *string         `gorm:"size:255" json:"local_id,omitempty"` // Client-generated ID
 	Version        int             `gorm:"default:1" json:"version"`
 	LastModifiedBy *uuid.UUID      `gorm:"type:uuid" json:"last_modified_by,omitempty"`
@@ -89,6 +185,7 @@ type Reminder struct {
 
 	// Relations
 	User      *User               `gorm:"foreignKey:UserID" json:"-"`
+	List      *ReminderList       `gorm:"foreignKey:ListID" json:"-"`
 	Instances []ReminderInstance  `gorm:"foreignKey:ReminderID" json:"instances,omitempty"`
 }
 

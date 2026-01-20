@@ -54,12 +54,14 @@ func (s *ReminderService) Create(userID uuid.UUID, req dto.CreateReminderRequest
 
 	reminder := &models.Reminder{
 		UserID:         userID,
+		ListID:         req.ListID,
 		Title:          req.Title,
 		Notes:          req.Notes,
 		DueAt:          req.DueAt,
 		AllDay:         req.AllDay,
 		RecurrenceRule: req.RecurrenceRule,
 		RecurrenceEnd:  req.RecurrenceEnd,
+		Tags:           models.StringArray(req.Tags),
 		LocalID:        req.LocalID,
 		Status:         models.StatusActive,
 		LastModifiedBy: deviceID,
@@ -67,6 +69,10 @@ func (s *ReminderService) Create(userID uuid.UUID, req dto.CreateReminderRequest
 
 	if req.Priority != nil {
 		reminder.Priority = models.Priority(*req.Priority)
+	}
+
+	if reminder.Tags == nil {
+		reminder.Tags = models.StringArray{}
 	}
 
 	if err := s.reminderRepo.Create(reminder); err != nil {
@@ -139,6 +145,9 @@ func (s *ReminderService) Update(userID, reminderID uuid.UUID, req dto.UpdateRem
 	}
 
 	// Apply updates
+	if req.ListID != nil {
+		reminder.ListID = req.ListID
+	}
 	if req.Title != nil {
 		reminder.Title = *req.Title
 	}
@@ -162,6 +171,9 @@ func (s *ReminderService) Update(userID, reminderID uuid.UUID, req dto.UpdateRem
 	}
 	if req.Status != nil {
 		reminder.Status = models.ReminderStatus(*req.Status)
+	}
+	if req.Tags != nil {
+		reminder.Tags = models.StringArray(req.Tags)
 	}
 
 	reminder.LastModifiedBy = deviceID

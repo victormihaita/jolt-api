@@ -9,6 +9,7 @@ import (
 
 // CreateReminderRequest is the request body for creating a reminder
 type CreateReminderRequest struct {
+	ListID         *uuid.UUID              `json:"list_id,omitempty"`
 	Title          string                  `json:"title" binding:"required,max=500"`
 	Notes          *string                 `json:"notes,omitempty"`
 	Priority       *int                    `json:"priority,omitempty"`
@@ -16,11 +17,13 @@ type CreateReminderRequest struct {
 	AllDay         bool                    `json:"all_day"`
 	RecurrenceRule *models.RecurrenceRule  `json:"recurrence_rule,omitempty"`
 	RecurrenceEnd  *time.Time              `json:"recurrence_end,omitempty"`
+	Tags           []string                `json:"tags,omitempty"`
 	LocalID        *string                 `json:"local_id,omitempty"`
 }
 
 // UpdateReminderRequest is the request body for updating a reminder
 type UpdateReminderRequest struct {
+	ListID         *uuid.UUID              `json:"list_id,omitempty"`
 	Title          *string                 `json:"title,omitempty" binding:"omitempty,max=500"`
 	Notes          *string                 `json:"notes,omitempty"`
 	Priority       *int                    `json:"priority,omitempty"`
@@ -29,6 +32,7 @@ type UpdateReminderRequest struct {
 	RecurrenceRule *models.RecurrenceRule  `json:"recurrence_rule,omitempty"`
 	RecurrenceEnd  *time.Time              `json:"recurrence_end,omitempty"`
 	Status         *string                 `json:"status,omitempty"`
+	Tags           []string                `json:"tags,omitempty"`
 }
 
 // SnoozeReminderRequest is the request body for snoozing a reminder
@@ -39,6 +43,7 @@ type SnoozeReminderRequest struct {
 // ReminderDTO represents a reminder in responses
 type ReminderDTO struct {
 	ID             uuid.UUID               `json:"id"`
+	ListID         *uuid.UUID              `json:"list_id,omitempty"`
 	Title          string                  `json:"title"`
 	Notes          *string                 `json:"notes,omitempty"`
 	Priority       int                     `json:"priority"`
@@ -50,6 +55,7 @@ type ReminderDTO struct {
 	CompletedAt    *time.Time              `json:"completed_at,omitempty"`
 	SnoozedUntil   *time.Time              `json:"snoozed_until,omitempty"`
 	SnoozeCount    int                     `json:"snooze_count"`
+	Tags           []string                `json:"tags,omitempty"`
 	LocalID        *string                 `json:"local_id,omitempty"`
 	Version        int                     `json:"version"`
 	CreatedAt      time.Time               `json:"created_at"`
@@ -67,8 +73,13 @@ type ReminderListResponse struct {
 
 // ToDTO converts a Reminder model to ReminderDTO
 func ReminderToDTO(r *models.Reminder) ReminderDTO {
+	tags := []string(r.Tags)
+	if tags == nil {
+		tags = []string{}
+	}
 	return ReminderDTO{
 		ID:             r.ID,
+		ListID:         r.ListID,
 		Title:          r.Title,
 		Notes:          r.Notes,
 		Priority:       int(r.Priority),
@@ -80,6 +91,7 @@ func ReminderToDTO(r *models.Reminder) ReminderDTO {
 		CompletedAt:    r.CompletedAt,
 		SnoozedUntil:   r.SnoozedUntil,
 		SnoozeCount:    r.SnoozeCount,
+		Tags:           tags,
 		LocalID:        r.LocalID,
 		Version:        r.Version,
 		CreatedAt:      r.CreatedAt,

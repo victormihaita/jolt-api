@@ -11,6 +11,7 @@ import (
 type Resolver struct {
 	AuthService         *service.AuthService
 	ReminderService     *service.ReminderService
+	ReminderListService *service.ReminderListService
 	SubscriptionService *service.SubscriptionService
 	UserRepo            *repository.UserRepository
 	DeviceRepo          *repository.DeviceRepository
@@ -22,6 +23,7 @@ type Resolver struct {
 func NewResolver(
 	authService *service.AuthService,
 	reminderService *service.ReminderService,
+	reminderListService *service.ReminderListService,
 	subscriptionService *service.SubscriptionService,
 	userRepo *repository.UserRepository,
 	deviceRepo *repository.DeviceRepository,
@@ -31,6 +33,7 @@ func NewResolver(
 	return &Resolver{
 		AuthService:         authService,
 		ReminderService:     reminderService,
+		ReminderListService: reminderListService,
 		SubscriptionService: subscriptionService,
 		UserRepo:            userRepo,
 		DeviceRepo:          deviceRepo,
