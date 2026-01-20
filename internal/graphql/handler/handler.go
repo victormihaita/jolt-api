@@ -138,7 +138,8 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		if err != nil {
 			fmt.Printf("Me query error: %v\n", err)
 			errs = append(errs, errorToGraphQLError(err))
-			data["me"] = nil
+			// For non-nullable return type, return early with null data
+			return GraphQLResponse{Data: nil, Errors: errs}
 		} else {
 			fmt.Printf("Me query result: %+v\n", result)
 			data["me"] = result
@@ -149,7 +150,8 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		result, err := h.Resolver.Devices(ctx)
 		if err != nil {
 			errs = append(errs, errorToGraphQLError(err))
-			data["devices"] = nil
+			// For non-nullable return type, return early with null data
+			return GraphQLResponse{Data: nil, Errors: errs}
 		} else {
 			data["devices"] = result
 		}
@@ -189,13 +191,21 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 		if err != nil {
 			fmt.Printf("Reminders query error: %v\n", err)
 			errs = append(errs, errorToGraphQLError(err))
-			data["reminders"] = nil
+			// For non-nullable return type, don't set data["reminders"] = nil
+			// GraphQL spec: if a non-nullable field errors, data should be null
+			// So we return early with null data
+			return GraphQLResponse{Data: nil, Errors: errs}
 		} else {
 			fmt.Printf("Reminders query result: %d edges\n", len(result.Edges))
+			// Debug: print full JSON of result
+			resultJSON, _ := json.MarshalIndent(result, "", "  ")
+			fmt.Printf("Reminders query result JSON:\n%s\n", string(resultJSON))
 			data["reminders"] = result
 		}
 	}
 
+	// Per GraphQL spec: if any error occurs on a non-nullable field,
+	// data should be null. We handle this case above for reminders.
 	keys := make([]string, 0, len(data))
 	for k := range data {
 		keys = append(keys, k)
