@@ -89,6 +89,11 @@ func main() {
 			graphqlHandler.WebSocketHandler(c)
 			return
 		}
+		// Check if this is a GraphQL query via GET (some clients use this)
+		if c.Query("query") != "" {
+			graphqlHandler.GraphQLGet(c)
+			return
+		}
 		// Otherwise serve the playground
 		graphqlHandler.Playground(c)
 	})

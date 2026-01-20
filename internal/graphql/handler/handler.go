@@ -52,7 +52,7 @@ func NewHandler(r *resolver.Resolver, jwtManager *jwt.Manager) *Handler {
 	}
 }
 
-// GraphQL handles GraphQL HTTP requests
+// GraphQL handles GraphQL HTTP POST requests
 func (h *Handler) GraphQL(c *gin.Context) {
 	var req GraphQLRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -60,6 +60,35 @@ func (h *Handler) GraphQL(c *gin.Context) {
 			Errors: []GraphQLError{{Message: "Invalid request body"}},
 		})
 		return
+	}
+
+	// Create context with auth info
+	ctx := h.contextWithAuth(c)
+
+	// Execute the query
+	result := h.execute(ctx, req)
+
+	// Set no-cache headers to prevent any caching
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+	c.Header("Pragma", "no-cache")
+	c.Header("Expires", "0")
+
+	c.JSON(http.StatusOK, result)
+}
+
+// GraphQLGet handles GraphQL HTTP GET requests (query passed as URL parameter)
+func (h *Handler) GraphQLGet(c *gin.Context) {
+	req := GraphQLRequest{
+		Query:         c.Query("query"),
+		OperationName: c.Query("operationName"),
+	}
+
+	// Parse variables from query string if present
+	if varsStr := c.Query("variables"); varsStr != "" {
+		var vars map[string]interface{}
+		if err := json.Unmarshal([]byte(varsStr), &vars); err == nil {
+			req.Variables = vars
+		}
 	}
 
 	// Create context with auth info
@@ -129,7 +158,9 @@ func (h *Handler) executeQuery(ctx context.Context, req GraphQLRequest) GraphQLR
 	fmt.Printf("executeQuery: opName=%q, query=%q\n", opName, query)
 
 	// Handle introspection queries
-	if strings.Contains(query, "__schema") || strings.Contains(query, "__type") || opName == "introspectionquery" {
+	// Note: We check for "__schema" and "__type(" with parenthesis to avoid matching "__typename"
+	// which is a standard field in GraphQL queries but not an introspection query
+	if strings.Contains(query, "__schema") || strings.Contains(query, "__type(") || opName == "introspectionquery" {
 		return GraphQLResponse{Data: getIntrospectionData()}
 	}
 
