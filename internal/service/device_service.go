@@ -25,6 +25,11 @@ func NewDeviceService(deviceRepo *repository.DeviceRepository, userRepo *reposit
 
 // Register registers a new device or updates an existing one.
 func (s *DeviceService) Register(userID uuid.UUID, req dto.RegisterDeviceRequest) (*dto.DeviceDTO, error) {
+	// Validate push token is not empty
+	if req.PushToken == "" {
+		return nil, apperrors.ValidationError("Push token is required")
+	}
+
 	// Check device limit for non-premium users
 	user, err := s.userRepo.FindByID(userID)
 	if err != nil {
