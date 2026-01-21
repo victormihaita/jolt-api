@@ -87,12 +87,53 @@ func main() {
 	}
 	log.Println("  ✓ tags column added (or already exists)")
 
-	// 4. Create index on list_id if it doesn't exist
-	log.Println("Creating index on reminders.list_id...")
+	// 4. Add is_alarm column to reminders table if it doesn't exist
+	log.Println("Adding is_alarm column to reminders table...")
+	addIsAlarmSQL := `
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name = 'reminders' AND column_name = 'is_alarm'
+			) THEN
+				ALTER TABLE reminders ADD COLUMN is_alarm BOOLEAN DEFAULT false;
+			END IF;
+		END $$;
+	`
+	if err := db.Exec(addIsAlarmSQL).Error; err != nil {
+		log.Fatalf("Failed to add is_alarm column: %v", err)
+	}
+	log.Println("  ✓ is_alarm column added (or already exists)")
+
+	// 5. Add notification_sent_at column to reminders table if it doesn't exist
+	log.Println("Adding notification_sent_at column to reminders table...")
+	addNotificationSentAtSQL := `
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name = 'reminders' AND column_name = 'notification_sent_at'
+			) THEN
+				ALTER TABLE reminders ADD COLUMN notification_sent_at TIMESTAMP WITH TIME ZONE;
+			END IF;
+		END $$;
+	`
+	if err := db.Exec(addNotificationSentAtSQL).Error; err != nil {
+		log.Fatalf("Failed to add notification_sent_at column: %v", err)
+	}
+	log.Println("  ✓ notification_sent_at column added (or already exists)")
+
+	// 6. Create indexes
+	log.Println("Creating indexes...")
 	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_reminders_list_id ON reminders(list_id)").Error; err != nil {
-		log.Printf("  Warning: Could not create index: %v", err)
+		log.Printf("  Warning: Could not create list_id index: %v", err)
 	} else {
-		log.Println("  ✓ Index created")
+		log.Println("  ✓ list_id index created")
+	}
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_reminders_notification_sent ON reminders(notification_sent_at) WHERE deleted_at IS NULL").Error; err != nil {
+		log.Printf("  Warning: Could not create notification_sent_at index: %v", err)
+	} else {
+		log.Println("  ✓ notification_sent_at index created")
 	}
 
 	log.Println("")
@@ -115,4 +156,6 @@ func main() {
 	log.Println("  - reminders")
 	log.Println("    - list_id (UUID, nullable)")
 	log.Println("    - tags (TEXT[])")
+	log.Println("    - is_alarm (BOOLEAN)")
+	log.Println("    - notification_sent_at (TIMESTAMP)")
 }
