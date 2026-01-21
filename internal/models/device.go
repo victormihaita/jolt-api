@@ -22,10 +22,9 @@ type Device struct {
 	DeviceName string         `gorm:"size:255" json:"device_name"`
 	AppVersion string         `gorm:"size:20" json:"app_version"`
 	OSVersion  string         `gorm:"size:20" json:"os_version"`
-	LastSeenAt time.Time      `gorm:"default:now()" json:"last_seen_at"`
-	CreatedAt  time.Time      `json:"created_at"`
-	UpdatedAt  time.Time      `json:"updated_at"`
-	DeletedAt  gorm.DeletedAt `gorm:"index" json:"-"`
+	LastSeenAt time.Time `gorm:"default:now()" json:"last_seen_at"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 
 	// Relations
 	User *User `gorm:"foreignKey:UserID" json:"-"`
