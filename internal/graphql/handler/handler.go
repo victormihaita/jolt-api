@@ -449,7 +449,9 @@ func (h *Handler) executeMutation(ctx context.Context, req GraphQLRequest) Graph
 		}
 	}
 
-	if strings.Contains(query, "registerdevice") {
+	// Note: Check for "unregisterdevice" first to avoid false positive,
+	// since "unregisterdevice" contains "registerdevice" as a substring
+	if strings.Contains(query, "registerdevice") && !strings.Contains(query, "unregisterdevice") {
 		var input model.RegisterDeviceInput
 		if inputVar, ok := req.Variables["input"]; ok {
 			inputBytes, _ := json.Marshal(inputVar)
