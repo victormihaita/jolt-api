@@ -71,6 +71,10 @@ func (s *ReminderService) Create(userID uuid.UUID, req dto.CreateReminderRequest
 		reminder.Priority = models.Priority(*req.Priority)
 	}
 
+	if req.IsAlarm != nil {
+		reminder.IsAlarm = *req.IsAlarm
+	}
+
 	if reminder.Tags == nil {
 		reminder.Tags = models.StringArray{}
 	}
@@ -168,6 +172,9 @@ func (s *ReminderService) Update(userID, reminderID uuid.UUID, req dto.UpdateRem
 	}
 	if req.RecurrenceEnd != nil {
 		reminder.RecurrenceEnd = req.RecurrenceEnd
+	}
+	if req.IsAlarm != nil {
+		reminder.IsAlarm = *req.IsAlarm
 	}
 	if req.Status != nil {
 		reminder.Status = models.ReminderStatus(*req.Status)

@@ -244,6 +244,7 @@ func dtoToReminder(d *dto.ReminderDTO) *model.Reminder {
 		CompletedAt:    d.CompletedAt,
 		SnoozedUntil:   d.SnoozedUntil,
 		SnoozeCount:    d.SnoozeCount,
+		IsAlarm:        d.IsAlarm,
 		Tags:           tags,
 		LocalID:        d.LocalID,
 		Version:        d.Version,

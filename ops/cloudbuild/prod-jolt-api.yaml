@@ -53,6 +53,7 @@ steps:
         "--set-secrets=JWT_SECRET=prod_jwt-secret:latest",
         "--set-secrets=GOOGLE_CLIENT_ID=prod_google-client-id:latest",
         "--set-secrets=REVENUECAT_API_KEY=prod_revenuecat-api-key:latest",
+        "--set-secrets=CRON_SECRET=prod_cron-secret:latest",
         "--set-secrets=APNS_KEY_ID=prod_apns-key-id:latest",
         "--set-secrets=APNS_TEAM_ID=prod_apns-team-id:latest",
         "--set-secrets=APNS_PRIVATE_KEY=prod_apns-private-key:latest",

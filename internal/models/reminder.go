@@ -173,9 +173,11 @@ type Reminder struct {
 	RecurrenceEnd  *time.Time      `json:"recurrence_end,omitempty"`
 	Status         ReminderStatus  `gorm:"type:varchar(20);default:'active';index" json:"status"`
 	CompletedAt    *time.Time      `json:"completed_at,omitempty"`
-	SnoozedUntil   *time.Time      `json:"snoozed_until,omitempty"`
-	SnoozeCount    int             `gorm:"default:0" json:"snooze_count"`
-	Tags           StringArray     `gorm:"type:text[];default:'{}'" json:"tags,omitempty"` // Tags for cross-list filtering
+	SnoozedUntil       *time.Time      `json:"snoozed_until,omitempty"`
+	SnoozeCount        int             `gorm:"default:0" json:"snooze_count"`
+	IsAlarm            bool            `gorm:"default:false" json:"is_alarm"`                     // Alarm-style notification (bypasses DND)
+	NotificationSentAt *time.Time      `gorm:"index" json:"notification_sent_at,omitempty"`       // When notification was sent (prevents duplicates)
+	Tags               StringArray     `gorm:"type:text[];default:'{}'" json:"tags,omitempty"`    // Tags for cross-list filtering
 	LocalID        *string         `gorm:"size:255" json:"local_id,omitempty"` // Client-generated ID
 	Version        int             `gorm:"default:1" json:"version"`
 	LastModifiedBy *uuid.UUID      `gorm:"type:uuid" json:"last_modified_by,omitempty"`

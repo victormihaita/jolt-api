@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"github.com/user/remind-me/backend/internal/notification"
 	"github.com/user/remind-me/backend/internal/pubsub"
 	"github.com/user/remind-me/backend/internal/repository"
 	"github.com/user/remind-me/backend/internal/service"
@@ -9,14 +10,15 @@ import (
 
 // Resolver is the root resolver for all GraphQL operations
 type Resolver struct {
-	AuthService         *service.AuthService
-	ReminderService     *service.ReminderService
-	ReminderListService *service.ReminderListService
-	SubscriptionService *service.SubscriptionService
-	UserRepo            *repository.UserRepository
-	DeviceRepo          *repository.DeviceRepository
-	JWTManager          *jwt.Manager
-	Hub                 *pubsub.Hub
+	AuthService            *service.AuthService
+	ReminderService        *service.ReminderService
+	ReminderListService    *service.ReminderListService
+	SubscriptionService    *service.SubscriptionService
+	UserRepo               *repository.UserRepository
+	DeviceRepo             *repository.DeviceRepository
+	JWTManager             *jwt.Manager
+	Hub                    *pubsub.Hub
+	NotificationDispatcher *notification.Dispatcher
 }
 
 // NewResolver creates a new Resolver with all dependencies
@@ -29,15 +31,17 @@ func NewResolver(
 	deviceRepo *repository.DeviceRepository,
 	jwtManager *jwt.Manager,
 	hub *pubsub.Hub,
+	notificationDispatcher *notification.Dispatcher,
 ) *Resolver {
 	return &Resolver{
-		AuthService:         authService,
-		ReminderService:     reminderService,
-		ReminderListService: reminderListService,
-		SubscriptionService: subscriptionService,
-		UserRepo:            userRepo,
-		DeviceRepo:          deviceRepo,
-		JWTManager:          jwtManager,
-		Hub:                 hub,
+		AuthService:            authService,
+		ReminderService:        reminderService,
+		ReminderListService:    reminderListService,
+		SubscriptionService:    subscriptionService,
+		UserRepo:               userRepo,
+		DeviceRepo:             deviceRepo,
+		JWTManager:             jwtManager,
+		Hub:                    hub,
+		NotificationDispatcher: notificationDispatcher,
 	}
 }

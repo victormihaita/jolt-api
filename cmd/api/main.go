@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -10,10 +11,14 @@ import (
 	"github.com/user/remind-me/backend/internal/database"
 	gqlhandler "github.com/user/remind-me/backend/internal/graphql/handler"
 	"github.com/user/remind-me/backend/internal/graphql/resolver"
+	"github.com/user/remind-me/backend/internal/jobs"
 	"github.com/user/remind-me/backend/internal/middleware"
+	"github.com/user/remind-me/backend/internal/notification"
+	"github.com/user/remind-me/backend/internal/notification/apns"
+	"github.com/user/remind-me/backend/internal/notification/fcm"
+	"github.com/user/remind-me/backend/internal/pubsub"
 	"github.com/user/remind-me/backend/internal/repository"
 	"github.com/user/remind-me/backend/internal/service"
-	"github.com/user/remind-me/backend/internal/pubsub"
 	"github.com/user/remind-me/backend/pkg/jwt"
 )
 
@@ -49,6 +54,43 @@ func main() {
 	reminderListService := service.NewReminderListService(reminderListRepo, reminderRepo)
 	subscriptionService := service.NewSubscriptionService(cfg, userRepo)
 
+	// Initialize notification clients (may be nil if not configured)
+	var notificationDispatcher *notification.Dispatcher
+	var notificationJob *jobs.NotificationJob
+
+	var apnsClient *apns.Client
+	if cfg.APNsKeyID != "" && cfg.APNsTeamID != "" && cfg.APNsPrivateKey != "" {
+		apnsClient, err = apns.NewClient(apns.Config{
+			KeyID:        cfg.APNsKeyID,
+			TeamID:       cfg.APNsTeamID,
+			PrivateKey:   cfg.APNsPrivateKey,
+			BundleID:     cfg.APNsBundleID,
+			IsProduction: cfg.IsProduction(),
+		})
+		if err != nil {
+			log.Printf("Warning: APNs client not initialized: %v", err)
+			apnsClient = nil
+		}
+	}
+
+	var fcmClient *fcm.Client
+	if cfg.FCMProjectID != "" && cfg.FCMPrivateKey != "" {
+		fcmClient, err = fcm.NewClient(fcm.Config{
+			ProjectID:       cfg.FCMProjectID,
+			CredentialsJSON: cfg.FCMPrivateKey,
+		})
+		if err != nil {
+			log.Printf("Warning: FCM client not initialized: %v", err)
+			fcmClient = nil
+		}
+	}
+
+	if apnsClient != nil || fcmClient != nil {
+		notificationDispatcher = notification.NewDispatcher(apnsClient, fcmClient, deviceRepo)
+		notificationJob = jobs.NewNotificationJob(reminderRepo, notificationDispatcher)
+		log.Printf("Notification dispatcher initialized")
+	}
+
 	// Initialize GraphQL resolver
 	gqlResolver := resolver.NewResolver(
 		authService,
@@ -59,6 +101,7 @@ func main() {
 		deviceRepo,
 		jwtManager,
 		hub,
+		notificationDispatcher,
 	)
 
 	// Initialize GraphQL handler
@@ -81,6 +124,34 @@ func main() {
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "app": "jolt"})
+	})
+
+	// Cron endpoint for processing due notifications
+	// Called by GCP Cloud Scheduler every minute
+	r.POST("/api/cron/notifications", func(c *gin.Context) {
+		// Verify cron secret
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "Bearer "+cfg.CronSecret {
+			c.JSON(401, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		if notificationJob == nil {
+			c.JSON(503, gin.H{"error": "notification service not configured"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 55*time.Second)
+		defer cancel()
+
+		count, err := notificationJob.ProcessDueReminders(ctx)
+		if err != nil {
+			log.Printf("Error processing due reminders: %v", err)
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(200, gin.H{"processed": count})
 	})
 
 	// GraphQL endpoints

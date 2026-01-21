@@ -23,6 +23,9 @@ type Config struct {
 	// RevenueCat
 	RevenueCatAPIKey string
 
+	// Cron
+	CronSecret string
+
 	// Server
 	Port        string
 	Environment string
@@ -47,6 +50,9 @@ func Load() *Config {
 
 		// RevenueCat
 		RevenueCatAPIKey: getEnv("REVENUECAT_API_KEY", ""),
+
+		// Cron
+		CronSecret: getEnv("CRON_SECRET", ""),
 
 		// Server
 		Port:        getEnv("PORT", "8080"),

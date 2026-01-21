@@ -10,6 +10,7 @@ import (
 	"github.com/user/remind-me/backend/internal/graphql/middleware"
 	"github.com/user/remind-me/backend/internal/graphql/model"
 	"github.com/user/remind-me/backend/internal/models"
+	"github.com/user/remind-me/backend/internal/notification"
 	apperrors "github.com/user/remind-me/backend/pkg/errors"
 )
 
@@ -109,6 +110,7 @@ func (r *Resolver) CreateReminder(ctx context.Context, input model.CreateReminde
 		AllDay:         input.AllDay,
 		RecurrenceRule: model.RecurrenceRuleToModel(input.RecurrenceRule),
 		RecurrenceEnd:  input.RecurrenceEnd,
+		IsAlarm:        input.IsAlarm,
 		Tags:           input.Tags,
 		LocalID:        input.LocalID,
 	}
@@ -156,6 +158,7 @@ func (r *Resolver) UpdateReminder(ctx context.Context, id uuid.UUID, input model
 		AllDay:         input.AllDay,
 		RecurrenceRule: model.RecurrenceRuleToModel(input.RecurrenceRule),
 		RecurrenceEnd:  input.RecurrenceEnd,
+		IsAlarm:        input.IsAlarm,
 		Status:         status,
 		Tags:           input.Tags,
 	}
@@ -190,6 +193,11 @@ func (r *Resolver) DeleteReminder(ctx context.Context, id uuid.UUID) (bool, erro
 	// Broadcast delete event
 	r.broadcastReminderDelete(userID, id)
 
+	// Send cross-device notification to dismiss notification on other devices
+	if r.NotificationDispatcher != nil {
+		go r.NotificationDispatcher.SendCrossDeviceAction(ctx, userID, deviceID, id, notification.ActionDelete)
+	}
+
 	return true, nil
 }
 
@@ -211,6 +219,11 @@ func (r *Resolver) SnoozeReminder(ctx context.Context, id uuid.UUID, minutes int
 
 	// Broadcast change event
 	r.broadcastReminderChange(userID, model.ChangeActionUpdated, result)
+
+	// Send cross-device notification to dismiss notification on other devices
+	if r.NotificationDispatcher != nil {
+		go r.NotificationDispatcher.SendCrossDeviceAction(ctx, userID, deviceID, id, notification.ActionSnooze)
+	}
 
 	return result, nil
 }
@@ -234,6 +247,11 @@ func (r *Resolver) CompleteReminder(ctx context.Context, id uuid.UUID) (*model.R
 	// Broadcast change event
 	r.broadcastReminderChange(userID, model.ChangeActionUpdated, result)
 
+	// Send cross-device notification to dismiss notification on other devices
+	if r.NotificationDispatcher != nil {
+		go r.NotificationDispatcher.SendCrossDeviceAction(ctx, userID, deviceID, id, notification.ActionComplete)
+	}
+
 	return result, nil
 }
 
@@ -255,6 +273,11 @@ func (r *Resolver) DismissReminder(ctx context.Context, id uuid.UUID) (bool, err
 	reminderDTO, _ := r.ReminderService.GetByID(userID, id)
 	if reminderDTO != nil {
 		r.broadcastReminderChange(userID, model.ChangeActionUpdated, dtoToReminder(reminderDTO))
+	}
+
+	// Send cross-device notification to dismiss notification on other devices
+	if r.NotificationDispatcher != nil {
+		go r.NotificationDispatcher.SendCrossDeviceAction(ctx, userID, deviceID, id, notification.ActionDismiss)
 	}
 
 	return true, nil

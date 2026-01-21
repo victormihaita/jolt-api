@@ -125,3 +125,19 @@ func (r *DeviceRepository) GetAllPushTokens(userID uuid.UUID) ([]struct {
 		Find(&result).Error
 	return result, err
 }
+
+// GetPushTokensExcluding returns all push tokens for a user except the specified device
+func (r *DeviceRepository) GetPushTokensExcluding(userID uuid.UUID, excludeDeviceID uuid.UUID) ([]struct {
+	Platform  models.Platform
+	PushToken string
+}, error) {
+	var result []struct {
+		Platform  models.Platform
+		PushToken string
+	}
+	err := r.db.Model(&models.Device{}).
+		Select("platform", "push_token").
+		Where("user_id = ? AND id != ?", userID, excludeDeviceID).
+		Find(&result).Error
+	return result, err
+}

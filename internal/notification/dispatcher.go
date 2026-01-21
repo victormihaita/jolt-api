@@ -22,7 +22,18 @@ type Payload struct {
 	ReminderID uuid.UUID         `json:"reminder_id"`
 	DueAt      string            `json:"due_at,omitempty"`
 	Data       map[string]string `json:"data,omitempty"`
+	IsAlarm    bool              `json:"is_alarm,omitempty"`
 }
+
+// CrossDeviceAction represents an action to propagate to other devices
+type CrossDeviceAction string
+
+const (
+	ActionSnooze   CrossDeviceAction = "snooze"
+	ActionComplete CrossDeviceAction = "complete"
+	ActionDismiss  CrossDeviceAction = "dismiss"
+	ActionDelete   CrossDeviceAction = "delete"
+)
 
 // Dispatcher handles sending notifications to multiple platforms
 type Dispatcher struct {
@@ -102,6 +113,105 @@ func (d *Dispatcher) SendToDevice(ctx context.Context, deviceID uuid.UUID, paylo
 		return d.sendToAndroid(ctx, device.PushToken, payload)
 	}
 
+	return nil
+}
+
+// SendToUserExcluding sends a notification to all devices of a user except the specified device
+func (d *Dispatcher) SendToUserExcluding(ctx context.Context, userID uuid.UUID, excludeDeviceID *uuid.UUID, payload Payload) error {
+	var tokens []struct {
+		Platform  models.Platform
+		PushToken string
+	}
+	var err error
+
+	if excludeDeviceID != nil {
+		tokens, err = d.deviceRepo.GetPushTokensExcluding(userID, *excludeDeviceID)
+	} else {
+		tokens, err = d.deviceRepo.GetAllPushTokens(userID)
+	}
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	errors := make(chan error, len(tokens))
+
+	for _, token := range tokens {
+		wg.Add(1)
+		go func(platform models.Platform, pushToken string) {
+			defer wg.Done()
+
+			var sendErr error
+			switch platform {
+			case models.PlatformIOS:
+				sendErr = d.sendToIOS(ctx, pushToken, payload)
+			case models.PlatformAndroid:
+				sendErr = d.sendToAndroid(ctx, pushToken, payload)
+			}
+
+			if sendErr != nil {
+				errors <- sendErr
+				log.Printf("Failed to send notification to %s device: %v", platform, sendErr)
+			}
+		}(token.Platform, token.PushToken)
+	}
+
+	wg.Wait()
+	close(errors)
+
+	var firstErr error
+	for err := range errors {
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+
+	return firstErr
+}
+
+// SendCrossDeviceAction sends a silent notification to propagate an action to other devices
+func (d *Dispatcher) SendCrossDeviceAction(ctx context.Context, userID uuid.UUID, excludeDeviceID *uuid.UUID, reminderID uuid.UUID, action CrossDeviceAction) error {
+	var tokens []struct {
+		Platform  models.Platform
+		PushToken string
+	}
+	var err error
+
+	if excludeDeviceID != nil {
+		tokens, err = d.deviceRepo.GetPushTokensExcluding(userID, *excludeDeviceID)
+	} else {
+		tokens, err = d.deviceRepo.GetAllPushTokens(userID)
+	}
+	if err != nil {
+		return err
+	}
+
+	data := map[string]string{
+		"type":        "cross_device_action",
+		"action":      string(action),
+		"reminder_id": reminderID.String(),
+	}
+
+	var wg sync.WaitGroup
+	for _, token := range tokens {
+		wg.Add(1)
+		go func(platform models.Platform, pushToken string) {
+			defer wg.Done()
+
+			switch platform {
+			case models.PlatformIOS:
+				if d.apnsClient != nil {
+					_ = d.apnsClient.SendData(ctx, pushToken, data)
+				}
+			case models.PlatformAndroid:
+				if d.fcmClient != nil {
+					_ = d.fcmClient.SendData(ctx, pushToken, data)
+				}
+			}
+		}(token.Platform, token.PushToken)
+	}
+
+	wg.Wait()
 	return nil
 }
 

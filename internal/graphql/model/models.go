@@ -407,6 +407,7 @@ type Reminder struct {
 	CompletedAt    *time.Time      `json:"completedAt"`
 	SnoozedUntil   *time.Time      `json:"snoozedUntil"`
 	SnoozeCount    int             `json:"snoozeCount"`
+	IsAlarm        bool            `json:"isAlarm"`
 	Tags           []string        `json:"tags"`
 	LocalID        *string         `json:"localId"`
 	Version        int             `json:"version"`
@@ -437,6 +438,7 @@ func ReminderFromModel(r *models.Reminder) *Reminder {
 		CompletedAt:    r.CompletedAt,
 		SnoozedUntil:   r.SnoozedUntil,
 		SnoozeCount:    r.SnoozeCount,
+		IsAlarm:        r.IsAlarm,
 		Tags:           tags,
 		LocalID:        r.LocalID,
 		Version:        r.Version,
@@ -455,6 +457,7 @@ type CreateReminderInput struct {
 	AllDay         bool                 `json:"allDay"`
 	RecurrenceRule *RecurrenceRuleInput `json:"recurrenceRule"`
 	RecurrenceEnd  *time.Time           `json:"recurrenceEnd"`
+	IsAlarm        *bool                `json:"isAlarm"`
 	Tags           []string             `json:"tags"`
 	LocalID        *string              `json:"localId"`
 }
@@ -468,6 +471,7 @@ type UpdateReminderInput struct {
 	AllDay         *bool                `json:"allDay"`
 	RecurrenceRule *RecurrenceRuleInput `json:"recurrenceRule"`
 	RecurrenceEnd  *time.Time           `json:"recurrenceEnd"`
+	IsAlarm        *bool                `json:"isAlarm"`
 	Status         *ReminderStatus      `json:"status"`
 	Tags           []string             `json:"tags"`
 }

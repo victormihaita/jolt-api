@@ -38,6 +38,15 @@ func GraphQLAuthMiddleware(jwtManager *jwt.Manager) func(http.Handler) http.Hand
 				}
 			}
 
+			// Check for X-Device-ID header (overrides JWT device ID if present)
+			// This allows clients to specify which device is making the request
+			deviceIDHeader := r.Header.Get("X-Device-ID")
+			if deviceIDHeader != "" {
+				if parsedID, err := uuid.Parse(deviceIDHeader); err == nil {
+					ctx = context.WithValue(ctx, DeviceIDKey, parsedID)
+				}
+			}
+
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
@@ -121,6 +130,15 @@ func WebSocketInitFunc(jwtManager *jwt.Manager) func(ctx context.Context, initPa
 		ctx = context.WithValue(ctx, ClaimsKey, claims)
 		if claims.DeviceID != nil {
 			ctx = context.WithValue(ctx, DeviceIDKey, *claims.DeviceID)
+		}
+
+		// Check for X-Device-ID in connection params (overrides JWT device ID if present)
+		if deviceIDValue, ok := initPayload["X-Device-ID"]; ok {
+			if deviceIDStr, ok := deviceIDValue.(string); ok {
+				if parsedID, err := uuid.Parse(deviceIDStr); err == nil {
+					ctx = context.WithValue(ctx, DeviceIDKey, parsedID)
+				}
+			}
 		}
 
 		return ctx, nil

@@ -162,6 +162,7 @@ type Reminder {
   completedAt: DateTime
   snoozedUntil: DateTime
   snoozeCount: Int!
+  isAlarm: Boolean!
   tags: [String!]!
   localId: String
   version: Int!
@@ -179,6 +180,7 @@ input CreateReminderInput {
   allDay: Boolean!
   recurrenceRule: RecurrenceRuleInput
   recurrenceEnd: DateTime
+  isAlarm: Boolean
   tags: [String!]
   localId: String
 }
@@ -192,6 +194,7 @@ input UpdateReminderInput {
   allDay: Boolean
   recurrenceRule: RecurrenceRuleInput
   recurrenceEnd: DateTime
+  isAlarm: Boolean
   status: ReminderStatus
   tags: [String!]
 }

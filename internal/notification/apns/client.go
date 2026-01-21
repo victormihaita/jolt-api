@@ -120,11 +120,20 @@ func (c *Client) Send(ctx context.Context, notification Notification) error {
 
 // SendSilent sends a silent/background notification
 func (c *Client) SendSilent(ctx context.Context, deviceToken string) error {
+	return c.SendData(ctx, deviceToken, map[string]string{"type": "sync"})
+}
+
+// SendData sends a silent/background notification with custom data
+func (c *Client) SendData(ctx context.Context, deviceToken string, data map[string]string) error {
 	payload := map[string]interface{}{
 		"aps": map[string]interface{}{
 			"content-available": 1,
 		},
-		"type": "sync",
+	}
+
+	// Add custom data to payload
+	for k, v := range data {
+		payload[k] = v
 	}
 
 	payloadBytes, err := json.Marshal(payload)

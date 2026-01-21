@@ -126,9 +126,10 @@ func (r *ReminderRepository) SoftDelete(id uuid.UUID) error {
 
 func (r *ReminderRepository) Snooze(id uuid.UUID, until time.Time, deviceID *uuid.UUID) error {
 	updates := map[string]interface{}{
-		"status":        models.StatusSnoozed,
-		"snoozed_until": until,
-		"snooze_count":  gorm.Expr("snooze_count + 1"),
+		"status":               models.StatusSnoozed,
+		"snoozed_until":        until,
+		"snooze_count":         gorm.Expr("snooze_count + 1"),
+		"notification_sent_at": nil, // Clear so a new notification will be sent after snooze
 	}
 	if deviceID != nil {
 		updates["last_modified_by"] = deviceID
@@ -192,4 +193,33 @@ func (r *ReminderRepository) CountByUser(userID uuid.UUID) (int64, error) {
 		Where("user_id = ?", userID).
 		Count(&count).Error
 	return count, err
+}
+
+// FindDueForNotification finds reminders that are due and haven't been notified yet
+// It looks for:
+// 1. Active reminders where due_at is in the past or within the next minute AND notification_sent_at IS NULL
+// 2. Snoozed reminders where snoozed_until is in the past or within the next minute AND notification_sent_at IS NULL
+func (r *ReminderRepository) FindDueForNotification(windowEnd time.Time) ([]models.Reminder, error) {
+	var reminders []models.Reminder
+	err := r.db.
+		Where("(status = ? AND due_at <= ? AND notification_sent_at IS NULL)", models.StatusActive, windowEnd).
+		Or("(status = ? AND snoozed_until <= ? AND notification_sent_at IS NULL)", models.StatusSnoozed, windowEnd).
+		Preload("User").
+		Find(&reminders).Error
+	return reminders, err
+}
+
+// MarkNotificationSent marks a reminder as having its notification sent
+func (r *ReminderRepository) MarkNotificationSent(id uuid.UUID) error {
+	now := time.Now()
+	return r.db.Model(&models.Reminder{}).
+		Where("id = ?", id).
+		Update("notification_sent_at", now).Error
+}
+
+// ClearNotificationSent clears the notification_sent_at field (used when rescheduling after snooze)
+func (r *ReminderRepository) ClearNotificationSent(id uuid.UUID) error {
+	return r.db.Model(&models.Reminder{}).
+		Where("id = ?", id).
+		Update("notification_sent_at", nil).Error
 }

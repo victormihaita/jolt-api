@@ -17,6 +17,7 @@ type CreateReminderRequest struct {
 	AllDay         bool                    `json:"all_day"`
 	RecurrenceRule *models.RecurrenceRule  `json:"recurrence_rule,omitempty"`
 	RecurrenceEnd  *time.Time              `json:"recurrence_end,omitempty"`
+	IsAlarm        *bool                   `json:"is_alarm,omitempty"`
 	Tags           []string                `json:"tags,omitempty"`
 	LocalID        *string                 `json:"local_id,omitempty"`
 }
@@ -31,6 +32,7 @@ type UpdateReminderRequest struct {
 	AllDay         *bool                   `json:"all_day,omitempty"`
 	RecurrenceRule *models.RecurrenceRule  `json:"recurrence_rule,omitempty"`
 	RecurrenceEnd  *time.Time              `json:"recurrence_end,omitempty"`
+	IsAlarm        *bool                   `json:"is_alarm,omitempty"`
 	Status         *string                 `json:"status,omitempty"`
 	Tags           []string                `json:"tags,omitempty"`
 }
@@ -55,6 +57,7 @@ type ReminderDTO struct {
 	CompletedAt    *time.Time              `json:"completed_at,omitempty"`
 	SnoozedUntil   *time.Time              `json:"snoozed_until,omitempty"`
 	SnoozeCount    int                     `json:"snooze_count"`
+	IsAlarm        bool                    `json:"is_alarm"`
 	Tags           []string                `json:"tags,omitempty"`
 	LocalID        *string                 `json:"local_id,omitempty"`
 	Version        int                     `json:"version"`
@@ -91,6 +94,7 @@ func ReminderToDTO(r *models.Reminder) ReminderDTO {
 		CompletedAt:    r.CompletedAt,
 		SnoozedUntil:   r.SnoozedUntil,
 		SnoozeCount:    r.SnoozeCount,
+		IsAlarm:        r.IsAlarm,
 		Tags:           tags,
 		LocalID:        r.LocalID,
 		Version:        r.Version,
