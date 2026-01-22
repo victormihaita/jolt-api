@@ -452,16 +452,25 @@ func (h *Handler) executeMutation(ctx context.Context, req GraphQLRequest) Graph
 	// Note: Check for "unregisterdevice" first to avoid false positive,
 	// since "unregisterdevice" contains "registerdevice" as a substring
 	if strings.Contains(query, "registerdevice") && !strings.Contains(query, "unregisterdevice") {
+		fmt.Printf("RegisterDevice mutation detected\n")
 		var input model.RegisterDeviceInput
 		if inputVar, ok := req.Variables["input"]; ok {
 			inputBytes, _ := json.Marshal(inputVar)
-			json.Unmarshal(inputBytes, &input)
+			fmt.Printf("RegisterDevice raw input: %s\n", string(inputBytes))
+			if err := json.Unmarshal(inputBytes, &input); err != nil {
+				fmt.Printf("RegisterDevice input unmarshal error: %v\n", err)
+			}
+		} else {
+			fmt.Printf("RegisterDevice: no input variable found in request\n")
 		}
+		fmt.Printf("RegisterDevice parsed input: platform=%v, pushToken=%s\n", input.Platform, input.PushToken)
 		result, err := h.Resolver.RegisterDevice(ctx, input)
 		if err != nil {
+			fmt.Printf("RegisterDevice error: %v\n", err)
 			errs = append(errs, errorToGraphQLError(err))
 			// Don't set data for non-nullable return type on error
 		} else {
+			fmt.Printf("RegisterDevice success: device ID=%s\n", result.ID)
 			data["registerDevice"] = result
 		}
 	}
