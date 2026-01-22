@@ -136,6 +136,42 @@ func main() {
 		log.Println("  ✓ notification_sent_at index created")
 	}
 
+	// 7. Add device_identifier column to devices table
+	log.Println("Adding device_identifier column to devices table...")
+	addDeviceIdentifierSQL := `
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name = 'devices' AND column_name = 'device_identifier'
+			) THEN
+				-- Add the column (nullable initially)
+				ALTER TABLE devices ADD COLUMN device_identifier VARCHAR(255);
+
+				-- Populate existing rows with their ID as the identifier
+				UPDATE devices SET device_identifier = id::text WHERE device_identifier IS NULL;
+
+				-- Make the column non-null
+				ALTER TABLE devices ALTER COLUMN device_identifier SET NOT NULL;
+			END IF;
+		END $$;
+	`
+	if err := db.Exec(addDeviceIdentifierSQL).Error; err != nil {
+		log.Fatalf("Failed to add device_identifier column: %v", err)
+	}
+	log.Println("  ✓ device_identifier column added (or already exists)")
+
+	// 8. Update unique constraint on devices table
+	log.Println("Updating unique constraint on devices table...")
+	// Drop old constraint if it exists
+	db.Exec("ALTER TABLE devices DROP CONSTRAINT IF EXISTS devices_user_id_push_token_key")
+	// Create new unique index on (user_id, device_identifier)
+	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_device_identifier ON devices(user_id, device_identifier)").Error; err != nil {
+		log.Printf("  Warning: Could not create device_identifier unique index: %v", err)
+	} else {
+		log.Println("  ✓ device_identifier unique index created")
+	}
+
 	log.Println("")
 	log.Println("========================================")
 	log.Println("Migrations completed successfully!")
