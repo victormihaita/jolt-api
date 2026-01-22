@@ -307,13 +307,14 @@ func (r *Resolver) RegisterDevice(ctx context.Context, input model.RegisterDevic
 	}
 
 	device := &models.Device{
-		UserID:     userID,
-		Platform:   platform,
-		PushToken:  input.PushToken,
-		DeviceName: deviceName,
-		AppVersion: appVersion,
-		OSVersion:  osVersion,
-		LastSeenAt: time.Now(),
+		UserID:           userID,
+		DeviceIdentifier: input.DeviceIdentifier,
+		Platform:         platform,
+		PushToken:        input.PushToken,
+		DeviceName:       deviceName,
+		AppVersion:       appVersion,
+		OSVersion:        osVersion,
+		LastSeenAt:       time.Now(),
 	}
 
 	err := r.DeviceRepo.Upsert(device)

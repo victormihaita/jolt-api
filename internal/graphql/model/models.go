@@ -250,15 +250,16 @@ type AuthPayload struct {
 
 // Device type
 type Device struct {
-	TypeName   string    `json:"__typename"`
-	ID         uuid.UUID `json:"id"`
-	Platform   Platform  `json:"platform"`
-	PushToken  string    `json:"pushToken"`
-	DeviceName *string   `json:"deviceName"`
-	AppVersion *string   `json:"appVersion"`
-	OsVersion  *string   `json:"osVersion"`
-	LastSeenAt time.Time `json:"lastSeenAt"`
-	CreatedAt  time.Time `json:"createdAt"`
+	TypeName         string    `json:"__typename"`
+	ID               uuid.UUID `json:"id"`
+	Platform         Platform  `json:"platform"`
+	DeviceIdentifier string    `json:"deviceIdentifier"`
+	PushToken        string    `json:"pushToken"`
+	DeviceName       *string   `json:"deviceName"`
+	AppVersion       *string   `json:"appVersion"`
+	OsVersion        *string   `json:"osVersion"`
+	LastSeenAt       time.Time `json:"lastSeenAt"`
+	CreatedAt        time.Time `json:"createdAt"`
 }
 
 func DeviceFromModel(d *models.Device) *Device {
@@ -280,15 +281,16 @@ func DeviceFromModel(d *models.Device) *Device {
 		osVersion = &d.OSVersion
 	}
 	return &Device{
-		TypeName:   "Device",
-		ID:         d.ID,
-		Platform:   platform,
-		PushToken:  d.PushToken,
-		DeviceName: deviceName,
-		AppVersion: appVersion,
-		OsVersion:  osVersion,
-		LastSeenAt: d.LastSeenAt,
-		CreatedAt:  d.CreatedAt,
+		TypeName:         "Device",
+		ID:               d.ID,
+		Platform:         platform,
+		DeviceIdentifier: d.DeviceIdentifier,
+		PushToken:        d.PushToken,
+		DeviceName:       deviceName,
+		AppVersion:       appVersion,
+		OsVersion:        osVersion,
+		LastSeenAt:       d.LastSeenAt,
+		CreatedAt:        d.CreatedAt,
 	}
 }
 
@@ -516,11 +518,12 @@ type PaginationInput struct {
 }
 
 type RegisterDeviceInput struct {
-	Platform   Platform `json:"platform"`
-	PushToken  string   `json:"pushToken"`
-	DeviceName *string  `json:"deviceName"`
-	AppVersion *string  `json:"appVersion"`
-	OsVersion  *string  `json:"osVersion"`
+	Platform         Platform `json:"platform"`
+	DeviceIdentifier string   `json:"deviceIdentifier"`
+	PushToken        string   `json:"pushToken"`
+	DeviceName       *string  `json:"deviceName"`
+	AppVersion       *string  `json:"appVersion"`
+	OsVersion        *string  `json:"osVersion"`
 }
 
 // Connection types

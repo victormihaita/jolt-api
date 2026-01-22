@@ -50,6 +50,7 @@ enum Platform {
 type Device {
   id: UUID!
   platform: Platform!
+  deviceIdentifier: String!
   pushToken: String!
   deviceName: String
   appVersion: String
@@ -60,6 +61,7 @@ type Device {
 
 input RegisterDeviceInput {
   platform: Platform!
+  deviceIdentifier: String!
   pushToken: String!
   deviceName: String
   appVersion: String

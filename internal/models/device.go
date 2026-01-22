@@ -15,16 +15,17 @@ const (
 )
 
 type Device struct {
-	ID         uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	UserID     uuid.UUID      `gorm:"type:uuid;not null;index" json:"user_id"`
-	Platform   Platform       `gorm:"type:varchar(10);not null" json:"platform"`
-	PushToken  string         `gorm:"not null" json:"-"`
-	DeviceName string         `gorm:"size:255" json:"device_name"`
-	AppVersion string         `gorm:"size:20" json:"app_version"`
-	OSVersion  string         `gorm:"size:20" json:"os_version"`
-	LastSeenAt time.Time `gorm:"default:now()" json:"last_seen_at"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID               uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
+	UserID           uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
+	DeviceIdentifier string    `gorm:"size:255;not null;uniqueIndex:idx_user_device_identifier" json:"device_identifier"`
+	Platform         Platform  `gorm:"type:varchar(10);not null" json:"platform"`
+	PushToken        string    `gorm:"not null" json:"-"`
+	DeviceName       string    `gorm:"size:255" json:"device_name"`
+	AppVersion       string    `gorm:"size:20" json:"app_version"`
+	OSVersion        string    `gorm:"size:20" json:"os_version"`
+	LastSeenAt       time.Time `gorm:"default:now()" json:"last_seen_at"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 
 	// Relations
 	User *User `gorm:"foreignKey:UserID" json:"-"`

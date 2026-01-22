@@ -80,9 +80,10 @@ func (r *DeviceRepository) DeleteByUser(userID uuid.UUID) error {
 }
 
 func (r *DeviceRepository) Upsert(device *models.Device) error {
-	// Try to find existing device with same push token
+	// Try to find existing device with same device identifier
+	// This ensures we update the push token when it changes, instead of creating duplicates
 	var existing models.Device
-	err := r.db.Where("user_id = ? AND push_token = ?", device.UserID, device.PushToken).First(&existing).Error
+	err := r.db.Where("user_id = ? AND device_identifier = ?", device.UserID, device.DeviceIdentifier).First(&existing).Error
 
 	if err == gorm.ErrRecordNotFound {
 		// Create new device
@@ -93,7 +94,8 @@ func (r *DeviceRepository) Upsert(device *models.Device) error {
 		return err
 	}
 
-	// Update existing device
+	// Update existing device, including the push token which may have changed
+	existing.PushToken = device.PushToken
 	existing.DeviceName = device.DeviceName
 	existing.AppVersion = device.AppVersion
 	existing.OSVersion = device.OSVersion
