@@ -3,6 +3,7 @@ package notification
 import (
 	"context"
 	"log"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -55,6 +56,25 @@ func NewDispatcher(
 	}
 }
 
+// isValidPushToken checks if a push token is valid for sending notifications
+// Returns false for empty tokens, simulator mock tokens, or other invalid tokens
+func isValidPushToken(token string) bool {
+	if token == "" {
+		return false
+	}
+	// Skip simulator mock tokens (iOS simulator generates these)
+	if strings.HasPrefix(token, "simulator-mock-token-") {
+		return false
+	}
+	// Valid iOS APNs tokens are 64 hex characters
+	// Valid FCM tokens are typically longer
+	// We don't strictly validate format, but skip obviously invalid ones
+	if len(token) < 32 {
+		return false
+	}
+	return true
+}
+
 // SendToUser sends a notification to all devices of a user
 func (d *Dispatcher) SendToUser(ctx context.Context, userID uuid.UUID, payload Payload) error {
 	tokens, err := d.deviceRepo.GetAllPushTokens(userID)
@@ -66,6 +86,12 @@ func (d *Dispatcher) SendToUser(ctx context.Context, userID uuid.UUID, payload P
 	errors := make(chan error, len(tokens))
 
 	for _, token := range tokens {
+		// Skip invalid tokens (empty, simulator mock tokens, etc.)
+		if !isValidPushToken(token.PushToken) {
+			log.Printf("Skipping invalid push token for %s device: %s...", token.Platform, token.PushToken[:min(20, len(token.PushToken))])
+			continue
+		}
+
 		wg.Add(1)
 		go func(platform models.Platform, pushToken string) {
 			defer wg.Done()
@@ -137,6 +163,11 @@ func (d *Dispatcher) SendToUserExcluding(ctx context.Context, userID uuid.UUID, 
 	errors := make(chan error, len(tokens))
 
 	for _, token := range tokens {
+		// Skip invalid tokens (empty, simulator mock tokens, etc.)
+		if !isValidPushToken(token.PushToken) {
+			continue
+		}
+
 		wg.Add(1)
 		go func(platform models.Platform, pushToken string) {
 			defer wg.Done()
@@ -194,6 +225,11 @@ func (d *Dispatcher) SendCrossDeviceAction(ctx context.Context, userID uuid.UUID
 
 	var wg sync.WaitGroup
 	for _, token := range tokens {
+		// Skip invalid tokens (empty, simulator mock tokens, etc.)
+		if !isValidPushToken(token.PushToken) {
+			continue
+		}
+
 		wg.Add(1)
 		go func(platform models.Platform, pushToken string) {
 			defer wg.Done()
@@ -242,6 +278,11 @@ func (d *Dispatcher) SendSyncNotification(ctx context.Context, userID uuid.UUID,
 
 	var wg sync.WaitGroup
 	for _, token := range tokens {
+		// Skip invalid tokens (empty, simulator mock tokens, etc.)
+		if !isValidPushToken(token.PushToken) {
+			continue
+		}
+
 		wg.Add(1)
 		go func(platform models.Platform, pushToken string) {
 			defer wg.Done()
