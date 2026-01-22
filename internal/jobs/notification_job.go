@@ -30,10 +30,10 @@ func NewNotificationJob(
 // ProcessDueReminders finds reminders that are due and sends notifications
 // This should be called by a cron job every minute
 func (j *NotificationJob) ProcessDueReminders(ctx context.Context) (int, error) {
-	// Look for reminders due within the next minute
-	windowEnd := time.Now().Add(1 * time.Minute)
+	// Find reminders that are due now or past due
+	now := time.Now()
 
-	reminders, err := j.reminderRepo.FindDueForNotification(windowEnd)
+	reminders, err := j.reminderRepo.FindDueForNotification(now)
 	if err != nil {
 		log.Printf("[NotificationJob] Error finding due reminders: %v", err)
 		return 0, err

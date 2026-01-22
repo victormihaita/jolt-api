@@ -197,13 +197,13 @@ func (r *ReminderRepository) CountByUser(userID uuid.UUID) (int64, error) {
 
 // FindDueForNotification finds reminders that are due and haven't been notified yet
 // It looks for:
-// 1. Active reminders where due_at is in the past or within the next minute AND notification_sent_at IS NULL
-// 2. Snoozed reminders where snoozed_until is in the past or within the next minute AND notification_sent_at IS NULL
-func (r *ReminderRepository) FindDueForNotification(windowEnd time.Time) ([]models.Reminder, error) {
+// 1. Active reminders where due_at is now or in the past AND notification_sent_at IS NULL
+// 2. Snoozed reminders where snoozed_until is now or in the past AND notification_sent_at IS NULL
+func (r *ReminderRepository) FindDueForNotification(now time.Time) ([]models.Reminder, error) {
 	var reminders []models.Reminder
 	err := r.db.
-		Where("(status = ? AND due_at <= ? AND notification_sent_at IS NULL)", models.StatusActive, windowEnd).
-		Or("(status = ? AND snoozed_until <= ? AND notification_sent_at IS NULL)", models.StatusSnoozed, windowEnd).
+		Where("(status = ? AND due_at <= ? AND notification_sent_at IS NULL)", models.StatusActive, now).
+		Or("(status = ? AND snoozed_until <= ? AND notification_sent_at IS NULL)", models.StatusSnoozed, now).
 		Preload("User").
 		Find(&reminders).Error
 	return reminders, err
