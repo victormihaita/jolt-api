@@ -9,6 +9,7 @@ import (
 
 	"github.com/user/remind-me/backend/internal/dto"
 	"github.com/user/remind-me/backend/internal/models"
+	"github.com/user/remind-me/backend/internal/notification/slack"
 	"github.com/user/remind-me/backend/internal/repository"
 	apperrors "github.com/user/remind-me/backend/pkg/errors"
 	"github.com/user/remind-me/backend/pkg/jwt"
@@ -18,13 +19,15 @@ type AuthService struct {
 	userRepo     *repository.UserRepository
 	jwtManager   *jwt.Manager
 	googleClient *http.Client
+	slackClient  *slack.Client
 }
 
-func NewAuthService(userRepo *repository.UserRepository, jwtManager *jwt.Manager) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, jwtManager *jwt.Manager, slackClient *slack.Client) *AuthService {
 	return &AuthService{
 		userRepo:     userRepo,
 		jwtManager:   jwtManager,
 		googleClient: &http.Client{},
+		slackClient:  slackClient,
 	}
 }
 
@@ -64,7 +67,10 @@ func (s *AuthService) AuthenticateWithGoogle(ctx context.Context, idToken string
 		return nil, apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to generate tokens", http.StatusInternalServerError)
 	}
 
-	_ = isNew // Could be used for analytics/onboarding
+	// Send Slack notification for new user signups
+	if isNew && s.slackClient != nil {
+		s.slackClient.SendNewUserNotification(userInfo.Email, userInfo.Name)
+	}
 
 	return &dto.AuthResponse{
 		AccessToken:  tokenPair.AccessToken,

@@ -23,6 +23,9 @@ type Config struct {
 	// RevenueCat
 	RevenueCatAPIKey string
 
+	// Slack
+	SlackWebhookURL string
+
 	// Cron
 	CronSecret string
 
@@ -50,6 +53,9 @@ func Load() *Config {
 
 		// RevenueCat
 		RevenueCatAPIKey: getEnv("REVENUECAT_API_KEY", ""),
+
+		// Slack
+		SlackWebhookURL: getEnv("SLACK_WEBHOOK_URL", ""),
 
 		// Cron
 		CronSecret: getEnv("CRON_SECRET", ""),

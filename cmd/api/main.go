@@ -16,6 +16,7 @@ import (
 	"github.com/user/remind-me/backend/internal/notification"
 	"github.com/user/remind-me/backend/internal/notification/apns"
 	"github.com/user/remind-me/backend/internal/notification/fcm"
+	"github.com/user/remind-me/backend/internal/notification/slack"
 	"github.com/user/remind-me/backend/internal/pubsub"
 	"github.com/user/remind-me/backend/internal/repository"
 	"github.com/user/remind-me/backend/internal/service"
@@ -49,8 +50,15 @@ func main() {
 	notificationSoundRepo := repository.NewNotificationSoundRepository(db)
 	syncRepo := repository.NewSyncRepository(db)
 
+	// Initialize Slack client for signup notifications
+	var slackClient *slack.Client
+	if cfg.SlackWebhookURL != "" {
+		slackClient = slack.NewClient(cfg.SlackWebhookURL)
+		log.Printf("Slack notification client initialized")
+	}
+
 	// Initialize services
-	authService := service.NewAuthService(userRepo, jwtManager)
+	authService := service.NewAuthService(userRepo, jwtManager, slackClient)
 	reminderService := service.NewReminderService(reminderRepo, syncRepo, userRepo)
 	reminderListService := service.NewReminderListService(reminderListRepo, reminderRepo)
 	subscriptionService := service.NewSubscriptionService(cfg, userRepo)

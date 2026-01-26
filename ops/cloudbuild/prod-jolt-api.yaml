@@ -59,7 +59,8 @@ steps:
         "--set-secrets=APNS_PRIVATE_KEY=prod_apns-private-key:latest",
         "--set-secrets=APNS_BUNDLE_ID=prod_apns-bundle-id:latest",
         "--set-secrets=FCM_PROJECT_ID=prod_fcm-project-id:latest",
-        "--set-secrets=FCM_PRIVATE_KEY=prod_fcm-private-key:latest"
+        "--set-secrets=FCM_PRIVATE_KEY=prod_fcm-private-key:latest",
+        "--set-secrets=SLACK_WEBHOOK_URL=prod_slack-webhook-url:latest"
       ]
 images:
   - "${_IMAGE_NAME}"
