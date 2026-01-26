@@ -13,11 +13,12 @@ type CreateReminderRequest struct {
 	Title          string                  `json:"title" binding:"required,max=500"`
 	Notes          *string                 `json:"notes,omitempty"`
 	Priority       *int                    `json:"priority,omitempty"`
-	DueAt          time.Time               `json:"due_at" binding:"required"`
-	AllDay         bool                    `json:"all_day"`
+	DueAt          *time.Time              `json:"due_at,omitempty"`      // Optional: reminders without dates don't trigger notifications
+	AllDay         *bool                   `json:"all_day,omitempty"`     // Optional: only relevant when DueAt is set
 	RecurrenceRule *models.RecurrenceRule  `json:"recurrence_rule,omitempty"`
 	RecurrenceEnd  *time.Time              `json:"recurrence_end,omitempty"`
 	IsAlarm        *bool                   `json:"is_alarm,omitempty"`
+	SoundID        *string                 `json:"sound_id,omitempty"`    // Notification sound filename (e.g., "ambient.wav")
 	Tags           []string                `json:"tags,omitempty"`
 	LocalID        *string                 `json:"local_id,omitempty"`
 }
@@ -33,6 +34,7 @@ type UpdateReminderRequest struct {
 	RecurrenceRule *models.RecurrenceRule  `json:"recurrence_rule,omitempty"`
 	RecurrenceEnd  *time.Time              `json:"recurrence_end,omitempty"`
 	IsAlarm        *bool                   `json:"is_alarm,omitempty"`
+	SoundID        *string                 `json:"sound_id,omitempty"`
 	Status         *string                 `json:"status,omitempty"`
 	Tags           []string                `json:"tags,omitempty"`
 }
@@ -49,8 +51,8 @@ type ReminderDTO struct {
 	Title          string                  `json:"title"`
 	Notes          *string                 `json:"notes,omitempty"`
 	Priority       int                     `json:"priority"`
-	DueAt          time.Time               `json:"due_at"`
-	AllDay         bool                    `json:"all_day"`
+	DueAt          *time.Time              `json:"due_at,omitempty"`      // Optional: reminders without dates
+	AllDay         *bool                   `json:"all_day,omitempty"`     // Optional: only relevant when DueAt is set
 	RecurrenceRule *models.RecurrenceRule  `json:"recurrence_rule,omitempty"`
 	RecurrenceEnd  *time.Time              `json:"recurrence_end,omitempty"`
 	Status         string                  `json:"status"`
@@ -58,6 +60,7 @@ type ReminderDTO struct {
 	SnoozedUntil   *time.Time              `json:"snoozed_until,omitempty"`
 	SnoozeCount    int                     `json:"snooze_count"`
 	IsAlarm        bool                    `json:"is_alarm"`
+	SoundID        *string                 `json:"sound_id,omitempty"`
 	Tags           []string                `json:"tags,omitempty"`
 	LocalID        *string                 `json:"local_id,omitempty"`
 	Version        int                     `json:"version"`
@@ -86,8 +89,8 @@ func ReminderToDTO(r *models.Reminder) ReminderDTO {
 		Title:          r.Title,
 		Notes:          r.Notes,
 		Priority:       int(r.Priority),
-		DueAt:          r.DueAt,
-		AllDay:         r.AllDay,
+		DueAt:          r.DueAt,   // Already a pointer, maps directly
+		AllDay:         r.AllDay,  // Already a pointer, maps directly
 		RecurrenceRule: r.RecurrenceRule,
 		RecurrenceEnd:  r.RecurrenceEnd,
 		Status:         string(r.Status),
@@ -95,6 +98,7 @@ func ReminderToDTO(r *models.Reminder) ReminderDTO {
 		SnoozedUntil:   r.SnoozedUntil,
 		SnoozeCount:    r.SnoozeCount,
 		IsAlarm:        r.IsAlarm,
+		SoundID:        r.SoundID,
 		Tags:           tags,
 		LocalID:        r.LocalID,
 		Version:        r.Version,

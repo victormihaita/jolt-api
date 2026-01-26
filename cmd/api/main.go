@@ -46,6 +46,7 @@ func main() {
 	deviceRepo := repository.NewDeviceRepository(db)
 	reminderRepo := repository.NewReminderRepository(db)
 	reminderListRepo := repository.NewReminderListRepository(db)
+	notificationSoundRepo := repository.NewNotificationSoundRepository(db)
 	syncRepo := repository.NewSyncRepository(db)
 
 	// Initialize services
@@ -99,6 +100,7 @@ func main() {
 		subscriptionService,
 		userRepo,
 		deviceRepo,
+		notificationSoundRepo,
 		jwtManager,
 		hub,
 		notificationDispatcher,
@@ -152,6 +154,31 @@ func main() {
 		}
 
 		c.JSON(200, gin.H{"processed": count})
+	})
+
+	// Cron endpoint for cleaning up stale devices
+	// Called by GCP Cloud Scheduler daily
+	deviceCleanupJob := jobs.NewDeviceCleanupJob(deviceRepo)
+	r.POST("/api/cron/device-cleanup", func(c *gin.Context) {
+		// Verify cron secret
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "Bearer "+cfg.CronSecret {
+			c.JSON(401, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 55*time.Second)
+		defer cancel()
+
+		// Clean up devices not seen in 14 days
+		count, err := deviceCleanupJob.CleanupStaleDevices(ctx, 14)
+		if err != nil {
+			log.Printf("Error cleaning up stale devices: %v", err)
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(200, gin.H{"deleted": count})
 	})
 
 	// GraphQL endpoints

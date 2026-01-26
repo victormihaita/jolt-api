@@ -155,6 +155,22 @@ func (r *Resolver) Devices(ctx context.Context) ([]*model.Device, error) {
 	return result, nil
 }
 
+// NotificationSounds returns all available notification sounds
+func (r *Resolver) NotificationSounds(ctx context.Context) ([]*model.NotificationSound, error) {
+	// This query doesn't require authentication - sounds are publicly available
+	sounds, err := r.NotificationSoundRepo.ListAll()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*model.NotificationSound, len(sounds))
+	for i := range sounds {
+		result[i] = model.NotificationSoundFromModel(&sounds[i])
+	}
+
+	return result, nil
+}
+
 // Helper functions
 
 func encodeCursor(page, index int) string {
@@ -245,6 +261,7 @@ func dtoToReminder(d *dto.ReminderDTO) *model.Reminder {
 		SnoozedUntil:   d.SnoozedUntil,
 		SnoozeCount:    d.SnoozeCount,
 		IsAlarm:        d.IsAlarm,
+		SoundID:        d.SoundID,
 		Tags:           tags,
 		LocalID:        d.LocalID,
 		Version:        d.Version,

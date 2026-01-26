@@ -167,8 +167,8 @@ type Reminder struct {
 	Title          string          `gorm:"size:500;not null" json:"title"`
 	Notes          *string         `json:"notes,omitempty"`
 	Priority       Priority        `gorm:"default:0" json:"priority"`
-	DueAt          time.Time       `gorm:"not null;index" json:"due_at"`
-	AllDay         bool            `gorm:"default:false" json:"all_day"`
+	DueAt          *time.Time      `gorm:"index" json:"due_at,omitempty"`  // Optional: reminders without dates don't trigger notifications
+	AllDay         *bool           `json:"all_day,omitempty"`              // Optional: only relevant when DueAt is set
 	RecurrenceRule *RecurrenceRule `gorm:"type:jsonb" json:"recurrence_rule,omitempty"`
 	RecurrenceEnd  *time.Time      `json:"recurrence_end,omitempty"`
 	Status         ReminderStatus  `gorm:"type:varchar(20);default:'active';index" json:"status"`
@@ -176,6 +176,7 @@ type Reminder struct {
 	SnoozedUntil       *time.Time      `json:"snoozed_until,omitempty"`
 	SnoozeCount        int             `gorm:"default:0" json:"snooze_count"`
 	IsAlarm            bool            `gorm:"default:false" json:"is_alarm"`                     // Alarm-style notification (bypasses DND)
+	SoundID            *string         `gorm:"size:50" json:"sound_id,omitempty"`                 // Sound to play for notification (e.g., "gentle_chime")
 	NotificationSentAt *time.Time      `gorm:"index" json:"notification_sent_at,omitempty"`       // When notification was sent (prevents duplicates)
 	Tags               StringArray     `gorm:"type:text[];default:'{}'" json:"tags,omitempty"`    // Tags for cross-list filtering
 	LocalID        *string         `gorm:"size:255" json:"local_id,omitempty"` // Client-generated ID
@@ -205,6 +206,11 @@ func (r *Reminder) BeforeUpdate(tx *gorm.DB) error {
 
 func (r *Reminder) IsRecurring() bool {
 	return r.RecurrenceRule != nil
+}
+
+// HasScheduledDate returns true if the reminder has a due date set
+func (r *Reminder) HasScheduledDate() bool {
+	return r.DueAt != nil
 }
 
 func (r *Reminder) IsActive() bool {

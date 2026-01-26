@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -79,11 +80,58 @@ func (r *DeviceRepository) DeleteByUser(userID uuid.UUID) error {
 	return r.db.Where("user_id = ?", userID).Delete(&models.Device{}).Error
 }
 
+// FindByDeviceIdentifier finds a device by its identifier regardless of user
+func (r *DeviceRepository) FindByDeviceIdentifier(deviceIdentifier string) (*models.Device, error) {
+	var device models.Device
+	err := r.db.Where("device_identifier = ?", deviceIdentifier).First(&device).Error
+	if err != nil {
+		return nil, err
+	}
+	return &device, nil
+}
+
+// DeleteByDeviceIdentifier removes a device by its identifier (used for unlinking)
+func (r *DeviceRepository) DeleteByDeviceIdentifier(deviceIdentifier string) error {
+	return r.db.Where("device_identifier = ?", deviceIdentifier).Delete(&models.Device{}).Error
+}
+
+// DeleteByPushToken removes a device by its push token (used when APNs returns invalid token)
+func (r *DeviceRepository) DeleteByPushToken(pushToken string) error {
+	return r.db.Where("push_token = ?", pushToken).Delete(&models.Device{}).Error
+}
+
+// DeleteStaleDevices removes devices not seen in the specified number of days
+func (r *DeviceRepository) DeleteStaleDevices(days int) (int64, error) {
+	staleThreshold := time.Now().AddDate(0, 0, -days)
+	result := r.db.Where("last_seen_at < ?", staleThreshold).Delete(&models.Device{})
+	return result.RowsAffected, result.Error
+}
+
 func (r *DeviceRepository) Upsert(device *models.Device) error {
-	// Try to find existing device with same device identifier
-	// This ensures we update the push token when it changes, instead of creating duplicates
+	// Step 1: Check if this device_identifier exists for a DIFFERENT user
+	// If so, unlink it from that user (device can only belong to one account)
+	var existingForOtherUser models.Device
+	err := r.db.Where("device_identifier = ? AND user_id != ?", device.DeviceIdentifier, device.UserID).First(&existingForOtherUser).Error
+	if err == nil {
+		log.Printf("[DeviceRepository] Device %s was linked to user %s, unlinking before linking to user %s",
+			device.DeviceIdentifier, existingForOtherUser.UserID, device.UserID)
+		r.db.Delete(&existingForOtherUser)
+	}
+
+	// Step 2: Check if this push_token exists for current user with a DIFFERENT device_identifier
+	// This handles the case where device_identifier changed but push_token stayed the same
+	var existingWithSameToken models.Device
+	err = r.db.Where("user_id = ? AND push_token = ? AND device_identifier != ?",
+		device.UserID, device.PushToken, device.DeviceIdentifier).First(&existingWithSameToken).Error
+	if err == nil {
+		log.Printf("[DeviceRepository] Removing stale device entry with same push_token but different identifier: %s",
+			existingWithSameToken.DeviceIdentifier)
+		r.db.Delete(&existingWithSameToken)
+	}
+
+	// Step 3: Try to find existing device with same device identifier for current user
 	var existing models.Device
-	err := r.db.Where("user_id = ? AND device_identifier = ?", device.UserID, device.DeviceIdentifier).First(&existing).Error
+	err = r.db.Where("user_id = ? AND device_identifier = ?", device.UserID, device.DeviceIdentifier).First(&existing).Error
 
 	if err == gorm.ErrRecordNotFound {
 		// Create new device
@@ -121,8 +169,10 @@ func (r *DeviceRepository) GetAllPushTokens(userID uuid.UUID) ([]struct {
 		Platform  models.Platform
 		PushToken string
 	}
+	// Use DISTINCT to prevent duplicate notifications when same push_token
+	// exists multiple times (e.g., after device_identifier changes)
 	err := r.db.Model(&models.Device{}).
-		Select("platform", "push_token").
+		Select("DISTINCT push_token, platform").
 		Where("user_id = ?", userID).
 		Find(&result).Error
 	return result, err
@@ -137,8 +187,10 @@ func (r *DeviceRepository) GetPushTokensExcluding(userID uuid.UUID, excludeDevic
 		Platform  models.Platform
 		PushToken string
 	}
+	// Use DISTINCT to prevent duplicate notifications when same push_token
+	// exists multiple times (e.g., after device_identifier changes)
 	err := r.db.Model(&models.Device{}).
-		Select("platform", "push_token").
+		Select("DISTINCT push_token, platform").
 		Where("user_id = ? AND id != ?", userID, excludeDeviceID).
 		Find(&result).Error
 	return result, err

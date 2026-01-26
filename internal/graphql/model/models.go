@@ -401,8 +401,8 @@ type Reminder struct {
 	Title          string          `json:"title"`
 	Notes          *string         `json:"notes"`
 	Priority       Priority        `json:"priority"`
-	DueAt          time.Time       `json:"dueAt"`
-	AllDay         bool            `json:"allDay"`
+	DueAt          *time.Time      `json:"dueAt"`   // Optional: reminders without dates don't trigger notifications
+	AllDay         *bool           `json:"allDay"`  // Optional: only relevant when DueAt is set
 	RecurrenceRule *RecurrenceRule `json:"recurrenceRule"`
 	RecurrenceEnd  *time.Time      `json:"recurrenceEnd"`
 	Status         ReminderStatus  `json:"status"`
@@ -410,6 +410,7 @@ type Reminder struct {
 	SnoozedUntil   *time.Time      `json:"snoozedUntil"`
 	SnoozeCount    int             `json:"snoozeCount"`
 	IsAlarm        bool            `json:"isAlarm"`
+	SoundID        *string         `json:"soundId"`
 	Tags           []string        `json:"tags"`
 	LocalID        *string         `json:"localId"`
 	Version        int             `json:"version"`
@@ -432,8 +433,8 @@ func ReminderFromModel(r *models.Reminder) *Reminder {
 		Title:          r.Title,
 		Notes:          r.Notes,
 		Priority:       PriorityFromModel(r.Priority),
-		DueAt:          r.DueAt,
-		AllDay:         r.AllDay,
+		DueAt:          r.DueAt,   // Already a pointer, maps directly
+		AllDay:         r.AllDay,  // Already a pointer, maps directly
 		RecurrenceRule: RecurrenceRuleFromModel(r.RecurrenceRule),
 		RecurrenceEnd:  r.RecurrenceEnd,
 		Status:         ReminderStatusFromModel(r.Status),
@@ -441,6 +442,7 @@ func ReminderFromModel(r *models.Reminder) *Reminder {
 		SnoozedUntil:   r.SnoozedUntil,
 		SnoozeCount:    r.SnoozeCount,
 		IsAlarm:        r.IsAlarm,
+		SoundID:        r.SoundID,
 		Tags:           tags,
 		LocalID:        r.LocalID,
 		Version:        r.Version,
@@ -455,11 +457,12 @@ type CreateReminderInput struct {
 	Title          string               `json:"title"`
 	Notes          *string              `json:"notes"`
 	Priority       *Priority            `json:"priority"`
-	DueAt          time.Time            `json:"dueAt"`
-	AllDay         bool                 `json:"allDay"`
+	DueAt          *time.Time           `json:"dueAt"`  // Optional: reminders without dates don't trigger notifications
+	AllDay         *bool                `json:"allDay"` // Optional: only relevant when DueAt is set
 	RecurrenceRule *RecurrenceRuleInput `json:"recurrenceRule"`
 	RecurrenceEnd  *time.Time           `json:"recurrenceEnd"`
 	IsAlarm        *bool                `json:"isAlarm"`
+	SoundID        *string              `json:"soundId"`
 	Tags           []string             `json:"tags"`
 	LocalID        *string              `json:"localId"`
 }
@@ -474,6 +477,7 @@ type UpdateReminderInput struct {
 	RecurrenceRule *RecurrenceRuleInput `json:"recurrenceRule"`
 	RecurrenceEnd  *time.Time           `json:"recurrenceEnd"`
 	IsAlarm        *bool                `json:"isAlarm"`
+	SoundID        *string              `json:"soundId"`
 	Status         *ReminderStatus      `json:"status"`
 	Tags           []string             `json:"tags"`
 }
@@ -555,4 +559,26 @@ type ReminderChangeEvent struct {
 	Reminder   *Reminder    `json:"reminder"`
 	ReminderID uuid.UUID    `json:"reminderId"`
 	Timestamp  time.Time    `json:"timestamp"`
+}
+
+// NotificationSound type
+type NotificationSound struct {
+	TypeName string    `json:"__typename"`
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Filename string    `json:"filename"`
+	IsFree   bool      `json:"isFree"`
+}
+
+func NotificationSoundFromModel(s *models.NotificationSound) *NotificationSound {
+	if s == nil {
+		return nil
+	}
+	return &NotificationSound{
+		TypeName: "NotificationSound",
+		ID:       s.ID,
+		Name:     s.Name,
+		Filename: s.Filename,
+		IsFree:   s.IsFree,
+	}
 }

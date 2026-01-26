@@ -48,11 +48,19 @@ func (j *NotificationJob) ProcessDueReminders(ctx context.Context) (int, error) 
 
 	sentCount := 0
 	for _, reminder := range reminders {
+		// Determine the notification sound
+		// Use custom sound filename if set, otherwise default
+		notificationSound := "default"
+		if reminder.SoundID != nil && *reminder.SoundID != "" {
+			// SoundID is the filename (e.g., "ambient.wav")
+			notificationSound = *reminder.SoundID
+		}
+
 		// Build the notification payload
 		payload := notification.Payload{
 			Title:      "Reminder",
 			Body:       reminder.Title,
-			Sound:      "default",
+			Sound:      notificationSound,
 			Category:   "REMINDER_ACTIONS",
 			ReminderID: reminder.ID,
 			DueAt:      reminder.DueAt.Format(time.RFC3339),
@@ -61,6 +69,11 @@ func (j *NotificationJob) ProcessDueReminders(ctx context.Context) (int, error) 
 				"reminder_id": reminder.ID.String(),
 				"is_alarm":    strconv.FormatBool(reminder.IsAlarm),
 			},
+		}
+
+		// Add sound_id to notification data for foreground handling
+		if reminder.SoundID != nil && *reminder.SoundID != "" {
+			payload.Data["sound_id"] = *reminder.SoundID
 		}
 
 		// Add notes to body if present

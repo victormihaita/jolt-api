@@ -111,6 +111,7 @@ func (r *Resolver) CreateReminder(ctx context.Context, input model.CreateReminde
 		RecurrenceRule: model.RecurrenceRuleToModel(input.RecurrenceRule),
 		RecurrenceEnd:  input.RecurrenceEnd,
 		IsAlarm:        input.IsAlarm,
+		SoundID:        input.SoundID,
 		Tags:           input.Tags,
 		LocalID:        input.LocalID,
 	}
@@ -159,6 +160,7 @@ func (r *Resolver) UpdateReminder(ctx context.Context, id uuid.UUID, input model
 		RecurrenceRule: model.RecurrenceRuleToModel(input.RecurrenceRule),
 		RecurrenceEnd:  input.RecurrenceEnd,
 		IsAlarm:        input.IsAlarm,
+		SoundID:        input.SoundID,
 		Status:         status,
 		Tags:           input.Tags,
 	}

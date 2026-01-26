@@ -68,6 +68,14 @@ input RegisterDeviceInput {
   osVersion: String
 }
 
+# NotificationSound types
+type NotificationSound {
+  id: UUID!
+  name: String!
+  filename: String!
+  isFree: Boolean!
+}
+
 # ReminderList types
 type ReminderList {
   id: UUID!
@@ -156,8 +164,8 @@ type Reminder {
   title: String!
   notes: String
   priority: Priority!
-  dueAt: DateTime!
-  allDay: Boolean!
+  dueAt: DateTime
+  allDay: Boolean
   recurrenceRule: RecurrenceRule
   recurrenceEnd: DateTime
   status: ReminderStatus!
@@ -165,6 +173,7 @@ type Reminder {
   snoozedUntil: DateTime
   snoozeCount: Int!
   isAlarm: Boolean!
+  soundId: String
   tags: [String!]!
   localId: String
   version: Int!
@@ -178,11 +187,12 @@ input CreateReminderInput {
   title: String!
   notes: String
   priority: Priority
-  dueAt: DateTime!
-  allDay: Boolean!
+  dueAt: DateTime
+  allDay: Boolean
   recurrenceRule: RecurrenceRuleInput
   recurrenceEnd: DateTime
   isAlarm: Boolean
+  soundId: String
   tags: [String!]
   localId: String
 }
@@ -197,6 +207,7 @@ input UpdateReminderInput {
   recurrenceRule: RecurrenceRuleInput
   recurrenceEnd: DateTime
   isAlarm: Boolean
+  soundId: String
   status: ReminderStatus
   tags: [String!]
 }
@@ -251,6 +262,7 @@ type Query {
   reminderList(id: UUID!): ReminderList
   reminderLists: [ReminderList!]!
   devices: [Device!]!
+  notificationSounds: [NotificationSound!]!
 }
 
 type Mutation {

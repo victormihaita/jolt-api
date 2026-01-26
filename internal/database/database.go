@@ -25,7 +25,8 @@ func Connect(databaseURL string) (*gorm.DB, error) {
 	)
 
 	db, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
-		Logger: newLogger,
+		Logger:      newLogger,
+		PrepareStmt: false, // Disable prepared statements to avoid "cached plan must not change result type" errors after schema changes
 	})
 	if err != nil {
 		return nil, err

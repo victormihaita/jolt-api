@@ -75,6 +75,10 @@ func (s *ReminderService) Create(userID uuid.UUID, req dto.CreateReminderRequest
 		reminder.IsAlarm = *req.IsAlarm
 	}
 
+	if req.SoundID != nil {
+		reminder.SoundID = req.SoundID
+	}
+
 	if reminder.Tags == nil {
 		reminder.Tags = models.StringArray{}
 	}
@@ -162,10 +166,10 @@ func (s *ReminderService) Update(userID, reminderID uuid.UUID, req dto.UpdateRem
 		reminder.Priority = models.Priority(*req.Priority)
 	}
 	if req.DueAt != nil {
-		reminder.DueAt = *req.DueAt
+		reminder.DueAt = req.DueAt // Assign pointer directly (allows clearing with explicit null)
 	}
 	if req.AllDay != nil {
-		reminder.AllDay = *req.AllDay
+		reminder.AllDay = req.AllDay // Assign pointer directly (allows clearing with explicit null)
 	}
 	if req.RecurrenceRule != nil {
 		reminder.RecurrenceRule = req.RecurrenceRule
@@ -175,6 +179,9 @@ func (s *ReminderService) Update(userID, reminderID uuid.UUID, req dto.UpdateRem
 	}
 	if req.IsAlarm != nil {
 		reminder.IsAlarm = *req.IsAlarm
+	}
+	if req.SoundID != nil {
+		reminder.SoundID = req.SoundID
 	}
 	if req.Status != nil {
 		reminder.Status = models.ReminderStatus(*req.Status)

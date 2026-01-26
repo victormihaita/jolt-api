@@ -262,6 +262,17 @@ func (d *Dispatcher) SendSyncNotification(ctx context.Context, userID uuid.UUID,
 }
 
 func (d *Dispatcher) sendToIOS(ctx context.Context, token string, payload Payload) error {
+	// Build base Data map
+	data := map[string]interface{}{
+		"reminder_id": payload.ReminderID.String(),
+		"due_at":      payload.DueAt,
+	}
+
+	// Merge payload.Data (contains sound_id, is_alarm, type)
+	for k, v := range payload.Data {
+		data[k] = v
+	}
+
 	notification := apns.Notification{
 		DeviceToken: token,
 		Title:       payload.Title,
@@ -269,10 +280,7 @@ func (d *Dispatcher) sendToIOS(ctx context.Context, token string, payload Payloa
 		Sound:       payload.Sound,
 		Badge:       payload.Badge,
 		Category:    payload.Category,
-		Data: map[string]interface{}{
-			"reminder_id": payload.ReminderID.String(),
-			"due_at":      payload.DueAt,
-		},
+		Data:        data,
 	}
 
 	return d.apnsClient.Send(ctx, notification)

@@ -66,9 +66,11 @@ func (r *ReminderRepository) List(params ReminderListParams) ([]models.Reminder,
 		query = query.Where("status = ?", *params.Status)
 	}
 	if params.FromDate != nil {
+		// Only filter by date if FromDate is set - reminders without dates won't match
 		query = query.Where("due_at >= ?", *params.FromDate)
 	}
 	if params.ToDate != nil {
+		// Only filter by date if ToDate is set - reminders without dates won't match
 		query = query.Where("due_at <= ?", *params.ToDate)
 	}
 
@@ -77,10 +79,10 @@ func (r *ReminderRepository) List(params ReminderListParams) ([]models.Reminder,
 		return nil, 0, err
 	}
 
-	// Paginate
+	// Paginate - NULLS LAST puts reminders without dates at the end
 	offset := (params.Page - 1) * params.PageSize
 	err := query.
-		Order("due_at ASC").
+		Order("due_at ASC NULLS LAST").
 		Offset(offset).
 		Limit(params.PageSize).
 		Find(&reminders).Error
@@ -96,7 +98,7 @@ func (r *ReminderRepository) ListActive(userID uuid.UUID) ([]models.Reminder, er
 	var reminders []models.Reminder
 	err := r.db.
 		Where("user_id = ? AND status IN ?", userID, []string{"active", "snoozed"}).
-		Order("due_at ASC").
+		Order("due_at ASC NULLS LAST"). // Reminders without dates go to the end
 		Find(&reminders).Error
 	return reminders, err
 }
@@ -179,8 +181,9 @@ func (r *ReminderRepository) Reactivate(id uuid.UUID) error {
 
 func (r *ReminderRepository) GetDueReminders(before time.Time) ([]models.Reminder, error) {
 	var reminders []models.Reminder
+	// Only include reminders with scheduled dates (due_at IS NOT NULL)
 	err := r.db.
-		Where("status = ? AND due_at <= ?", models.StatusActive, before).
+		Where("due_at IS NOT NULL AND status = ? AND due_at <= ?", models.StatusActive, before).
 		Or("status = ? AND snoozed_until <= ?", models.StatusSnoozed, before).
 		Preload("User").
 		Find(&reminders).Error
@@ -199,10 +202,11 @@ func (r *ReminderRepository) CountByUser(userID uuid.UUID) (int64, error) {
 // It looks for:
 // 1. Active reminders where due_at is now or in the past AND notification_sent_at IS NULL
 // 2. Snoozed reminders where snoozed_until is now or in the past AND notification_sent_at IS NULL
+// Note: Reminders without scheduled dates (due_at IS NULL) are excluded from notifications
 func (r *ReminderRepository) FindDueForNotification(now time.Time) ([]models.Reminder, error) {
 	var reminders []models.Reminder
 	err := r.db.
-		Where("(status = ? AND due_at <= ? AND notification_sent_at IS NULL)", models.StatusActive, now).
+		Where("(due_at IS NOT NULL AND status = ? AND due_at <= ? AND notification_sent_at IS NULL)", models.StatusActive, now).
 		Or("(status = ? AND snoozed_until <= ? AND notification_sent_at IS NULL)", models.StatusSnoozed, now).
 		Preload("User").
 		Find(&reminders).Error
