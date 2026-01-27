@@ -70,8 +70,8 @@ func (s *SubscriptionService) VerifySubscription(userID uuid.UUID) (bool, *time.
 		return false, nil, err
 	}
 
-	// Check for active "Jolt Pro" entitlement
-	premiumEntitlement, hasPremium := subscriber.Entitlements["Jolt Pro"]
+	// Check for active "premium" entitlement - must match RevenueCat dashboard
+	premiumEntitlement, hasPremium := subscriber.Entitlements["premium"]
 
 	var isPremium bool
 	var premiumUntil *time.Time
