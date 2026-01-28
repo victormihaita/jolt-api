@@ -265,9 +265,17 @@ type Query {
   notificationSounds: [NotificationSound!]!
 }
 
+input AuthenticateWithAppleInput {
+  identityToken: String!
+  userIdentifier: String!
+  email: String
+  displayName: String
+}
+
 type Mutation {
   # Authentication
   authenticateWithGoogle(idToken: String!): AuthPayload!
+  authenticateWithApple(input: AuthenticateWithAppleInput!): AuthPayload!
   refreshToken(refreshToken: String!): AuthPayload!
   logout: Boolean!
 

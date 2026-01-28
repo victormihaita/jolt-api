@@ -303,6 +303,22 @@ func (h *Handler) executeMutation(ctx context.Context, req GraphQLRequest) Graph
 		}
 	}
 
+	if strings.Contains(query, "authenticatewithapple") {
+		var input model.AuthenticateWithAppleInput
+		if inputVar, ok := req.Variables["input"]; ok {
+			inputBytes, _ := json.Marshal(inputVar)
+			json.Unmarshal(inputBytes, &input)
+		}
+		result, err := h.Resolver.AuthenticateWithApple(ctx, input)
+		if err != nil {
+			fmt.Printf("AuthenticateWithApple error: %v\n", err)
+			errs = append(errs, errorToGraphQLError(err))
+			// Don't set data for non-nullable return type on error
+		} else {
+			data["authenticateWithApple"] = result
+		}
+	}
+
 	// Check for refreshToken mutation - must handle various formatting (newlines, spaces)
 	// Match when refreshtoken is used as a mutation operation, not as a field in response selection
 	isRefreshTokenMutation := strings.Contains(query, "mutation") &&

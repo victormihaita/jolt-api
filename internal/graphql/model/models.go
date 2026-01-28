@@ -248,6 +248,14 @@ type AuthPayload struct {
 	User         *User  `json:"user"`
 }
 
+// AuthenticateWithAppleInput type
+type AuthenticateWithAppleInput struct {
+	IdentityToken  string  `json:"identityToken"`
+	UserIdentifier string  `json:"userIdentifier"`
+	Email          *string `json:"email"`
+	DisplayName    *string `json:"displayName"`
+}
+
 // Device type
 type Device struct {
 	TypeName         string    `json:"__typename"`

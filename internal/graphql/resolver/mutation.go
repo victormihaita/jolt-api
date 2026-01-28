@@ -35,6 +35,35 @@ func (r *Resolver) AuthenticateWithGoogle(ctx context.Context, idToken string) (
 	}, nil
 }
 
+// AuthenticateWithApple authenticates a user with their Apple identity token
+func (r *Resolver) AuthenticateWithApple(ctx context.Context, input model.AuthenticateWithAppleInput) (*model.AuthPayload, error) {
+	var email, displayName string
+	if input.Email != nil {
+		email = *input.Email
+	}
+	if input.DisplayName != nil {
+		displayName = *input.DisplayName
+	}
+
+	authResp, err := r.AuthService.AuthenticateWithApple(ctx, input.IdentityToken, input.UserIdentifier, email, displayName)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := r.UserRepo.FindByID(uuid.MustParse(authResp.User.ID))
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.AuthPayload{
+		TypeName:     "AuthPayload",
+		AccessToken:  authResp.AccessToken,
+		RefreshToken: authResp.RefreshToken,
+		ExpiresIn:    int(authResp.ExpiresIn),
+		User:         model.UserFromModel(user),
+	}, nil
+}
+
 // RefreshToken generates new tokens from a valid refresh token
 func (r *Resolver) RefreshToken(ctx context.Context, refreshToken string) (*model.AuthPayload, error) {
 	authResp, err := r.AuthService.RefreshToken(refreshToken)

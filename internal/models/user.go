@@ -9,7 +9,8 @@ import (
 
 type User struct {
 	ID           uuid.UUID      `gorm:"type:uuid;primary_key;default:gen_random_uuid()" json:"id"`
-	GoogleID     string         `gorm:"uniqueIndex;not null" json:"-"`
+	GoogleID     string         `gorm:"uniqueIndex" json:"-"`
+	AppleID      string         `gorm:"uniqueIndex" json:"-"`
 	Email        string         `gorm:"uniqueIndex;not null" json:"email"`
 	DisplayName  string         `gorm:"size:255" json:"display_name"`
 	AvatarURL    string         `json:"avatar_url,omitempty"`
