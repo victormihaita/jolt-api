@@ -120,6 +120,10 @@ func (r *ReminderRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.Reminder{}, id).Error
 }
 
+func (r *ReminderRepository) DeleteByUserID(userID uuid.UUID) error {
+	return r.db.Where("user_id = ?", userID).Delete(&models.Reminder{}).Error
+}
+
 func (r *ReminderRepository) SoftDelete(id uuid.UUID) error {
 	return r.db.Model(&models.Reminder{}).
 		Where("id = ?", id).
@@ -226,4 +230,11 @@ func (r *ReminderRepository) ClearNotificationSent(id uuid.UUID) error {
 	return r.db.Model(&models.Reminder{}).
 		Where("id = ?", id).
 		Update("notification_sent_at", nil).Error
+}
+
+// RestoreByUserID restores all soft-deleted reminders for a user
+func (r *ReminderRepository) RestoreByUserID(userID uuid.UUID) error {
+	return r.db.Unscoped().Model(&models.Reminder{}).
+		Where("user_id = ? AND deleted_at IS NOT NULL", userID).
+		Update("deleted_at", nil).Error
 }

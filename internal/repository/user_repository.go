@@ -64,7 +64,7 @@ func (r *UserRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.User{}, id).Error
 }
 
-func (r *UserRepository) FindOrCreate(googleID, email, displayName, avatarURL string) (*models.User, bool, error) {
+func (r *UserRepository) FindOrCreate(googleID, email, displayName, avatarURL string) (*models.User, bool, bool, error) {
 	var user models.User
 	err := r.db.Where("google_id = ?", googleID).First(&user).Error
 	if err == nil {
@@ -73,13 +73,49 @@ func (r *UserRepository) FindOrCreate(googleID, email, displayName, avatarURL st
 		user.DisplayName = displayName
 		user.AvatarURL = avatarURL
 		if err := r.db.Save(&user).Error; err != nil {
-			return nil, false, err
+			return nil, false, false, err
 		}
-		return &user, false, nil
+		return &user, false, false, nil
 	}
 
 	if err != gorm.ErrRecordNotFound {
-		return nil, false, err
+		return nil, false, false, err
+	}
+
+	// Check for soft-deleted user with same Google ID
+	err = r.db.Unscoped().Where("google_id = ? AND deleted_at IS NOT NULL", googleID).First(&user).Error
+	if err == nil {
+		// Found soft-deleted user, restore and update info
+		user.Email = email
+		user.DisplayName = displayName
+		user.AvatarURL = avatarURL
+		if err := r.db.Unscoped().Model(&user).Updates(map[string]interface{}{
+			"deleted_at":    nil,
+			"email":         email,
+			"display_name":  displayName,
+			"avatar_url":    avatarURL,
+		}).Error; err != nil {
+			return nil, false, false, err
+		}
+		return &user, false, true, nil
+	}
+
+	// Check for soft-deleted user with same email
+	if email != "" {
+		err = r.db.Unscoped().Where("email = ? AND deleted_at IS NOT NULL", email).First(&user).Error
+		if err == nil {
+			// Found soft-deleted user by email, restore and link Google ID
+			if err := r.db.Unscoped().Model(&user).Updates(map[string]interface{}{
+				"deleted_at":   nil,
+				"google_id":    googleID,
+				"email":        email,
+				"display_name": displayName,
+				"avatar_url":   avatarURL,
+			}).Error; err != nil {
+				return nil, false, false, err
+			}
+			return &user, false, true, nil
+		}
 	}
 
 	// Create new user
@@ -90,10 +126,10 @@ func (r *UserRepository) FindOrCreate(googleID, email, displayName, avatarURL st
 		AvatarURL:   avatarURL,
 	}
 	if err := r.db.Create(&user).Error; err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
 
-	return &user, true, nil
+	return &user, true, false, nil
 }
 
 func (r *UserRepository) UpdatePremiumStatus(id uuid.UUID, isPremium bool, premiumUntil *time.Time) error {
@@ -105,7 +141,7 @@ func (r *UserRepository) UpdatePremiumStatus(id uuid.UUID, isPremium bool, premi
 		}).Error
 }
 
-func (r *UserRepository) FindOrCreateByAppleID(appleID, email, displayName string) (*models.User, bool, error) {
+func (r *UserRepository) FindOrCreateByAppleID(appleID, email, displayName string) (*models.User, bool, bool, error) {
 	var user models.User
 	err := r.db.Where("apple_id = ?", appleID).First(&user).Error
 	if err == nil {
@@ -121,32 +157,69 @@ func (r *UserRepository) FindOrCreateByAppleID(appleID, email, displayName strin
 		}
 		if updated {
 			if err := r.db.Save(&user).Error; err != nil {
-				return nil, false, err
+				return nil, false, false, err
 			}
 		}
-		return &user, false, nil
+		return &user, false, false, nil
 	}
 
 	if err != gorm.ErrRecordNotFound {
-		return nil, false, err
+		return nil, false, false, err
+	}
+
+	// Check for soft-deleted user with same Apple ID
+	err = r.db.Unscoped().Where("apple_id = ? AND deleted_at IS NOT NULL", appleID).First(&user).Error
+	if err == nil {
+		// Found soft-deleted user, restore and update info
+		updates := map[string]interface{}{
+			"deleted_at": nil,
+		}
+		if email != "" {
+			updates["email"] = email
+		}
+		if displayName != "" {
+			updates["display_name"] = displayName
+		}
+		if err := r.db.Unscoped().Model(&user).Updates(updates).Error; err != nil {
+			return nil, false, false, err
+		}
+		return &user, false, true, nil
 	}
 
 	// Check if user exists with same email (account linking)
+	// Use Unscoped to also find soft-deleted users by email
 	if email != "" {
 		err = r.db.Where("email = ?", email).First(&user).Error
 		if err == nil {
-			// Link Apple ID to existing account
+			// Link Apple ID to existing active account
 			user.AppleID = appleID
 			if displayName != "" && user.DisplayName == "" {
 				user.DisplayName = displayName
 			}
 			if err := r.db.Save(&user).Error; err != nil {
-				return nil, false, err
+				return nil, false, false, err
 			}
-			return &user, false, nil
+			return &user, false, false, nil
 		}
 		if err != gorm.ErrRecordNotFound {
-			return nil, false, err
+			return nil, false, false, err
+		}
+
+		// Check for soft-deleted user with same email
+		err = r.db.Unscoped().Where("email = ? AND deleted_at IS NOT NULL", email).First(&user).Error
+		if err == nil {
+			// Found soft-deleted user by email, restore, link Apple ID
+			updates := map[string]interface{}{
+				"deleted_at": nil,
+				"apple_id":   appleID,
+			}
+			if displayName != "" {
+				updates["display_name"] = displayName
+			}
+			if err := r.db.Unscoped().Model(&user).Updates(updates).Error; err != nil {
+				return nil, false, false, err
+			}
+			return &user, false, true, nil
 		}
 	}
 
@@ -155,6 +228,23 @@ func (r *UserRepository) FindOrCreateByAppleID(appleID, email, displayName strin
 	userEmail := email
 	if userEmail == "" {
 		userEmail = appleID + "@privaterelay.appleid.com"
+	}
+
+	// Check for soft-deleted user with the resolved email (covers placeholder emails too)
+	err = r.db.Unscoped().Where("email = ? AND deleted_at IS NOT NULL", userEmail).First(&user).Error
+	if err == nil {
+		// Found soft-deleted user by email, restore and link Apple ID
+		updates := map[string]interface{}{
+			"deleted_at": nil,
+			"apple_id":   appleID,
+		}
+		if displayName != "" {
+			updates["display_name"] = displayName
+		}
+		if err := r.db.Unscoped().Model(&user).Updates(updates).Error; err != nil {
+			return nil, false, false, err
+		}
+		return &user, false, true, nil
 	}
 
 	// If no display name, use a default
@@ -169,8 +259,8 @@ func (r *UserRepository) FindOrCreateByAppleID(appleID, email, displayName strin
 		DisplayName: userName,
 	}
 	if err := r.db.Create(&user).Error; err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
 
-	return &user, true, nil
+	return &user, true, false, nil
 }

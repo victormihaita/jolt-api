@@ -16,6 +16,8 @@ type Resolver struct {
 	SubscriptionService    *service.SubscriptionService
 	UserRepo               *repository.UserRepository
 	DeviceRepo             *repository.DeviceRepository
+	ReminderRepo           *repository.ReminderRepository
+	ReminderListRepo       *repository.ReminderListRepository
 	NotificationSoundRepo  *repository.NotificationSoundRepository
 	JWTManager             *jwt.Manager
 	Hub                    *pubsub.Hub
@@ -30,6 +32,8 @@ func NewResolver(
 	subscriptionService *service.SubscriptionService,
 	userRepo *repository.UserRepository,
 	deviceRepo *repository.DeviceRepository,
+	reminderRepo *repository.ReminderRepository,
+	reminderListRepo *repository.ReminderListRepository,
 	notificationSoundRepo *repository.NotificationSoundRepository,
 	jwtManager *jwt.Manager,
 	hub *pubsub.Hub,
@@ -42,6 +46,8 @@ func NewResolver(
 		SubscriptionService:    subscriptionService,
 		UserRepo:               userRepo,
 		DeviceRepo:             deviceRepo,
+		ReminderRepo:           reminderRepo,
+		ReminderListRepo:       reminderListRepo,
 		NotificationSoundRepo:  notificationSoundRepo,
 		JWTManager:             jwtManager,
 		Hub:                    hub,

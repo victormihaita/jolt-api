@@ -7,10 +7,11 @@ type GoogleAuthRequest struct {
 
 // AuthResponse is the response for successful authentication
 type AuthResponse struct {
-	AccessToken  string   `json:"access_token"`
-	RefreshToken string   `json:"refresh_token"`
-	ExpiresIn    int64    `json:"expires_in"`
-	User         UserDTO  `json:"user"`
+	AccessToken            string  `json:"access_token"`
+	RefreshToken           string  `json:"refresh_token"`
+	ExpiresIn              int64   `json:"expires_in"`
+	User                   UserDTO `json:"user"`
+	AccountPendingDeletion bool    `json:"account_pending_deletion"`
 }
 
 // RefreshTokenRequest is the request body for refreshing tokens

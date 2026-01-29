@@ -102,6 +102,38 @@ func (s *SubscriptionService) VerifySubscription(userID uuid.UUID) (bool, *time.
 	return isPremium, premiumUntil, nil
 }
 
+// DeleteSubscriber deletes a subscriber from RevenueCat
+func (s *SubscriptionService) DeleteSubscriber(userID uuid.UUID) error {
+	if s.config.RevenueCatAPIKey == "" {
+		return nil // No RevenueCat configured
+	}
+
+	url := fmt.Sprintf("https://api.revenuecat.com/v1/subscribers/%s", userID.String())
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to create RevenueCat delete request", http.StatusInternalServerError)
+	}
+
+	req.Header.Set("Authorization", "Bearer "+s.config.RevenueCatAPIKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to contact RevenueCat", http.StatusInternalServerError)
+	}
+	defer resp.Body.Close()
+
+	// Treat 200 and 404 as success (user may not exist in RevenueCat)
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNotFound {
+		return nil
+	}
+
+	body, _ := io.ReadAll(resp.Body)
+	return apperrors.New(apperrors.CodeInternalError, fmt.Sprintf("RevenueCat delete API error: %s", string(body)), http.StatusInternalServerError)
+}
+
 // getRevenueCatSubscriber fetches subscriber info from RevenueCat API
 func (s *SubscriptionService) getRevenueCatSubscriber(appUserID string) (*RevenueCatSubscriber, error) {
 	if s.config.RevenueCatAPIKey == "" {

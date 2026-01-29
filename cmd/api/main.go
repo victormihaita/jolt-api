@@ -108,6 +108,8 @@ func main() {
 		subscriptionService,
 		userRepo,
 		deviceRepo,
+		reminderRepo,
+		reminderListRepo,
 		notificationSoundRepo,
 		jwtManager,
 		hub,
@@ -187,6 +189,31 @@ func main() {
 		}
 
 		c.JSON(200, gin.H{"deleted": count})
+	})
+
+	// Cron endpoint for purging soft-deleted accounts
+	// Called by GCP Cloud Scheduler daily
+	accountPurgeJob := jobs.NewAccountPurgeJob(db)
+	r.POST("/api/cron/account-purge", func(c *gin.Context) {
+		// Verify cron secret
+		authHeader := c.GetHeader("Authorization")
+		if authHeader != "Bearer "+cfg.CronSecret {
+			c.JSON(401, gin.H{"error": "unauthorized"})
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 55*time.Second)
+		defer cancel()
+
+		// Purge accounts deleted more than 30 days ago
+		count, err := accountPurgeJob.PurgeDeletedAccounts(ctx, 30)
+		if err != nil {
+			log.Printf("Error purging deleted accounts: %v", err)
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(200, gin.H{"purged": count})
 	})
 
 	// GraphQL endpoints

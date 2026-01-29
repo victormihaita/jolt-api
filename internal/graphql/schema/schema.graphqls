@@ -39,6 +39,7 @@ type AuthPayload {
   refreshToken: String!
   expiresIn: Int!
   user: User!
+  accountPendingDeletion: Boolean!
 }
 
 # Device types
@@ -278,6 +279,10 @@ type Mutation {
   authenticateWithApple(input: AuthenticateWithAppleInput!): AuthPayload!
   refreshToken(refreshToken: String!): AuthPayload!
   logout: Boolean!
+
+  # Account
+  deleteAccount: Boolean!
+  restoreAccount: Boolean!
 
   # Subscription
   verifySubscription: User!

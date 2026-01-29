@@ -155,6 +155,11 @@ func (s *ReminderListService) EnsureDefaultList(userID uuid.UUID) (*dto.Reminder
 	return &result, nil
 }
 
+// DeleteAllByUser soft-deletes all reminder lists belonging to a user
+func (s *ReminderListService) DeleteAllByUser(userID uuid.UUID) error {
+	return s.listRepo.DeleteByUserID(userID)
+}
+
 func defaultString(ptr *string, defaultVal string) string {
 	if ptr == nil || *ptr == "" {
 		return defaultVal

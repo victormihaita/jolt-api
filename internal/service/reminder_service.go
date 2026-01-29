@@ -288,6 +288,11 @@ func (s *ReminderService) Dismiss(userID, reminderID uuid.UUID, deviceID *uuid.U
 	return nil
 }
 
+// DeleteAllByUser soft-deletes all reminders belonging to a user
+func (s *ReminderService) DeleteAllByUser(userID uuid.UUID) error {
+	return s.reminderRepo.DeleteByUserID(userID)
+}
+
 // isPresetSnooze checks if the snooze duration is a free preset
 func isPresetSnooze(minutes int) bool {
 	presets := []int{5, 15, 30, 60} // Free presets: 5 min, 15 min, 30 min, 1 hour

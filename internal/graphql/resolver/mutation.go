@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"log"
 	"strings"
 	"time"
 
@@ -27,11 +28,12 @@ func (r *Resolver) AuthenticateWithGoogle(ctx context.Context, idToken string) (
 	}
 
 	return &model.AuthPayload{
-		TypeName:     "AuthPayload",
-		AccessToken:  authResp.AccessToken,
-		RefreshToken: authResp.RefreshToken,
-		ExpiresIn:    int(authResp.ExpiresIn),
-		User:         model.UserFromModel(user),
+		TypeName:               "AuthPayload",
+		AccessToken:            authResp.AccessToken,
+		RefreshToken:           authResp.RefreshToken,
+		ExpiresIn:              int(authResp.ExpiresIn),
+		User:                   model.UserFromModel(user),
+		AccountPendingDeletion: authResp.AccountPendingDeletion,
 	}, nil
 }
 
@@ -56,11 +58,12 @@ func (r *Resolver) AuthenticateWithApple(ctx context.Context, input model.Authen
 	}
 
 	return &model.AuthPayload{
-		TypeName:     "AuthPayload",
-		AccessToken:  authResp.AccessToken,
-		RefreshToken: authResp.RefreshToken,
-		ExpiresIn:    int(authResp.ExpiresIn),
-		User:         model.UserFromModel(user),
+		TypeName:               "AuthPayload",
+		AccessToken:            authResp.AccessToken,
+		RefreshToken:           authResp.RefreshToken,
+		ExpiresIn:              int(authResp.ExpiresIn),
+		User:                   model.UserFromModel(user),
+		AccountPendingDeletion: authResp.AccountPendingDeletion,
 	}, nil
 }
 
@@ -89,6 +92,61 @@ func (r *Resolver) RefreshToken(ctx context.Context, refreshToken string) (*mode
 func (r *Resolver) Logout(ctx context.Context) (bool, error) {
 	// In a stateless JWT system, logout is handled client-side by deleting tokens
 	// For a more robust implementation, you could blacklist the token
+	return true, nil
+}
+
+// DeleteAccount soft-deletes the current user's account and all associated data
+func (r *Resolver) DeleteAccount(ctx context.Context) (bool, error) {
+	userID, ok := middleware.GetUserID(ctx)
+	if !ok {
+		return false, apperrors.ErrUnauthorized
+	}
+
+	// 1. Delete RevenueCat subscriber (best-effort)
+	if err := r.SubscriptionService.DeleteSubscriber(userID); err != nil {
+		log.Printf("Warning: failed to delete RevenueCat subscriber for user %s: %v", userID, err)
+	}
+
+	// 2. Soft-delete all reminders
+	if err := r.ReminderService.DeleteAllByUser(userID); err != nil {
+		return false, apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to delete reminders", 500)
+	}
+
+	// 3. Soft-delete all reminder lists
+	if err := r.ReminderListService.DeleteAllByUser(userID); err != nil {
+		return false, apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to delete reminder lists", 500)
+	}
+
+	// 4. Soft-delete all devices
+	if err := r.DeviceRepo.DeleteByUser(userID); err != nil {
+		return false, apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to delete devices", 500)
+	}
+
+	// 5. Soft-delete user (GORM sets deleted_at)
+	if err := r.UserRepo.Delete(userID); err != nil {
+		return false, apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to delete user", 500)
+	}
+
+	return true, nil
+}
+
+// RestoreAccount restores soft-deleted reminders and reminder lists for the current user
+func (r *Resolver) RestoreAccount(ctx context.Context) (bool, error) {
+	userID, ok := middleware.GetUserID(ctx)
+	if !ok {
+		return false, apperrors.ErrUnauthorized
+	}
+
+	// Restore reminders
+	if err := r.ReminderRepo.RestoreByUserID(userID); err != nil {
+		return false, apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to restore reminders", 500)
+	}
+
+	// Restore reminder lists
+	if err := r.ReminderListRepo.RestoreByUserID(userID); err != nil {
+		return false, apperrors.Wrap(err, apperrors.CodeInternalError, "Failed to restore reminder lists", 500)
+	}
+
 	return true, nil
 }
 

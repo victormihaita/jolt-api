@@ -61,7 +61,7 @@ func (s *AuthService) AuthenticateWithGoogle(ctx context.Context, idToken string
 	}
 
 	// Find or create user
-	user, isNew, err := s.userRepo.FindOrCreate(
+	user, isNew, wasDeleted, err := s.userRepo.FindOrCreate(
 		userInfo.ID,
 		userInfo.Email,
 		userInfo.Name,
@@ -83,10 +83,11 @@ func (s *AuthService) AuthenticateWithGoogle(ctx context.Context, idToken string
 	}
 
 	return &dto.AuthResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		ExpiresIn:    s.jwtManager.GetAccessDuration(),
-		User:         s.userToDTO(user),
+		AccessToken:            tokenPair.AccessToken,
+		RefreshToken:           tokenPair.RefreshToken,
+		ExpiresIn:              s.jwtManager.GetAccessDuration(),
+		User:                   s.userToDTO(user),
+		AccountPendingDeletion: wasDeleted,
 	}, nil
 }
 
@@ -206,7 +207,7 @@ func (s *AuthService) AuthenticateWithApple(ctx context.Context, identityToken, 
 	}
 
 	// Find or create user
-	user, isNew, err := s.userRepo.FindOrCreateByAppleID(
+	user, isNew, wasDeleted, err := s.userRepo.FindOrCreateByAppleID(
 		userIdentifier,
 		userEmail,
 		displayName,
@@ -227,10 +228,11 @@ func (s *AuthService) AuthenticateWithApple(ctx context.Context, identityToken, 
 	}
 
 	return &dto.AuthResponse{
-		AccessToken:  tokenPair.AccessToken,
-		RefreshToken: tokenPair.RefreshToken,
-		ExpiresIn:    s.jwtManager.GetAccessDuration(),
-		User:         s.userToDTO(user),
+		AccessToken:            tokenPair.AccessToken,
+		RefreshToken:           tokenPair.RefreshToken,
+		ExpiresIn:              s.jwtManager.GetAccessDuration(),
+		User:                   s.userToDTO(user),
+		AccountPendingDeletion: wasDeleted,
 	}, nil
 }
 

@@ -351,6 +351,26 @@ func (h *Handler) executeMutation(ctx context.Context, req GraphQLRequest) Graph
 		}
 	}
 
+	if strings.Contains(query, "deleteaccount") {
+		result, err := h.Resolver.DeleteAccount(ctx)
+		if err != nil {
+			errs = append(errs, errorToGraphQLError(err))
+			data["deleteAccount"] = nil
+		} else {
+			data["deleteAccount"] = result
+		}
+	}
+
+	if strings.Contains(query, "restoreaccount") {
+		result, err := h.Resolver.RestoreAccount(ctx)
+		if err != nil {
+			errs = append(errs, errorToGraphQLError(err))
+			data["restoreAccount"] = nil
+		} else {
+			data["restoreAccount"] = result
+		}
+	}
+
 	if strings.Contains(query, "verifysubscription") {
 		result, err := h.Resolver.VerifySubscription(ctx)
 		if err != nil {
@@ -731,6 +751,7 @@ func getSchemaTypes() []map[string]interface{} {
 				{"name": "refreshToken", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "String"}}},
 				{"name": "expiresIn", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Int"}}},
 				{"name": "user", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "User"}}},
+				{"name": "accountPendingDeletion", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
 			},
 		},
 		{
@@ -905,6 +926,8 @@ func getSchemaTypes() []map[string]interface{} {
 				{"name": "dismissReminder", "description": "Dismiss reminder", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
 				{"name": "registerDevice", "description": "Register device", "args": []map[string]interface{}{{"name": "input", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "INPUT_OBJECT", "name": "RegisterDeviceInput"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "OBJECT", "name": "Device"}}},
 				{"name": "unregisterDevice", "description": "Unregister device", "args": []map[string]interface{}{{"name": "id", "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "UUID"}}}}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "deleteAccount", "description": "Delete account", "args": []interface{}{}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
+				{"name": "restoreAccount", "description": "Restore account after deletion", "args": []interface{}{}, "type": map[string]interface{}{"kind": "NON_NULL", "ofType": map[string]interface{}{"kind": "SCALAR", "name": "Boolean"}}},
 			},
 		},
 		// Subscription type

@@ -241,11 +241,12 @@ func UserFromModel(u *models.User) *User {
 
 // AuthPayload type
 type AuthPayload struct {
-	TypeName     string `json:"__typename"`
-	AccessToken  string `json:"accessToken"`
-	RefreshToken string `json:"refreshToken"`
-	ExpiresIn    int    `json:"expiresIn"`
-	User         *User  `json:"user"`
+	TypeName               string `json:"__typename"`
+	AccessToken            string `json:"accessToken"`
+	RefreshToken           string `json:"refreshToken"`
+	ExpiresIn              int    `json:"expiresIn"`
+	User                   *User  `json:"user"`
+	AccountPendingDeletion bool   `json:"accountPendingDeletion"`
 }
 
 // AuthenticateWithAppleInput type
