@@ -166,7 +166,7 @@ type Reminder struct {
 	ListID         *uuid.UUID      `gorm:"type:uuid;index" json:"list_id,omitempty"` // Optional: belongs to a list
 	Title          string          `gorm:"size:500;not null" json:"title"`
 	Notes          *string         `json:"notes,omitempty"`
-	Priority       Priority        `gorm:"default:0" json:"priority"`
+	Priority       Priority        `gorm:"default:2" json:"priority"`
 	DueAt          *time.Time      `gorm:"index" json:"due_at,omitempty"`  // Optional: reminders without dates don't trigger notifications
 	AllDay         *bool           `json:"all_day,omitempty"`              // Optional: only relevant when DueAt is set
 	RecurrenceRule *RecurrenceRule `gorm:"type:jsonb" json:"recurrence_rule,omitempty"`
