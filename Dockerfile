@@ -16,11 +16,11 @@ COPY /cmd ./cmd
 COPY /internal ./internal
 COPY /pkg ./pkg
 
-# Build a static application binary "zolt-api"
-RUN go build -v -o /usr/local/bin/zolt-api ./cmd/api
+# Build a static application binary "zalt-api"
+RUN go build -v -o /usr/local/bin/zalt-api ./cmd/api
 
 # Expose port
 EXPOSE 8080
 
-# Execute zolt-api when the container is started
-CMD [ "zolt-api" ]
+# Execute zalt-api when the container is started
+CMD [ "zalt-api" ]

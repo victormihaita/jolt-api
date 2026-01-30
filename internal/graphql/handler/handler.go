@@ -634,7 +634,7 @@ var playgroundHTML = `<!DOCTYPE html>
 <head>
   <meta charset=utf-8/>
   <meta name="viewport" content="user-scalable=no, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, minimal-ui">
-  <title>Zolt GraphQL Playground</title>
+  <title>Zalt GraphQL Playground</title>
   <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/graphql-playground-react/build/static/css/index.css" />
   <link rel="shortcut icon" href="//cdn.jsdelivr.net/npm/graphql-playground-react/build/favicon.png" />
   <script src="//cdn.jsdelivr.net/npm/graphql-playground-react/build/static/js/middleware.js"></script>
@@ -650,7 +650,7 @@ var playgroundHTML = `<!DOCTYPE html>
     </style>
     <img src='//cdn.jsdelivr.net/npm/graphql-playground-react/build/logo.png' alt=''>
     <div class="loading"> Loading
-      <span class="title">Zolt GraphQL</span>
+      <span class="title">Zalt GraphQL</span>
     </div>
   </div>
   <script>window.addEventListener('load', function (event) {
