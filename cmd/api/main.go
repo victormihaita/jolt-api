@@ -135,7 +135,7 @@ func main() {
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "app": "jolt"})
+		c.JSON(200, gin.H{"status": "ok", "app": "zalt"})
 	})
 
 	// Cron endpoint for processing due notifications
