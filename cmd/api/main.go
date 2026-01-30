@@ -240,7 +240,7 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Starting Jolt GraphQL server on port %s", port)
+	log.Printf("Starting Zolt GraphQL server on port %s", port)
 	log.Printf("GraphQL Playground available at http://localhost:%s/graphql", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)

@@ -1,8 +1,8 @@
 # Trigger info
-#   NAME: prod-jolt-api
+#   NAME: prod-zolt-api
 #   DESCRIPTION: Build and deploy to Cloud Run on push to main
 #   REGION: europe-west1
-#   TAGS: jolt-api
+#   TAGS: zolt-api
 #   EVENT: Push to branch
 #   BASE BRANCH: ^main$
 
@@ -70,8 +70,8 @@ options:
   dynamicSubstitutions: true
 substitutions:
   _REGION: europe-west1
-  _GAR_ROOT: "europe-west1-docker.pkg.dev/${PROJECT_ID}/jolt-api"
-  _SERVICE_NAME: "jolt-api"
+  _GAR_ROOT: "europe-west1-docker.pkg.dev/${PROJECT_ID}/zolt-api"
+  _SERVICE_NAME: "zolt-api"
   _SERVICE_CPU_COUNT: "1"
   _SERVICE_MEMORY_SIZE: 512Mi
   _SERVICE_CONCURRENCY: "80"

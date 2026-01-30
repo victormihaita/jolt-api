@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Database migration script for Jolt backend
+# Database migration script for Zolt backend
 # Usage: ./scripts/migrate.sh [up|down|status]
 
 set -e
