@@ -255,6 +255,13 @@ type ReminderListChangeEvent {
   timestamp: DateTime!
 }
 
+type UserChangeEvent {
+  action: ChangeAction!
+  user: User
+  userId: UUID!
+  timestamp: DateTime!
+}
+
 # Root types
 type Query {
   me: User!
@@ -310,4 +317,5 @@ type Mutation {
 type Subscription {
   reminderChanged: ReminderChangeEvent!
   reminderListChanged: ReminderListChangeEvent!
+  userChanged: UserChangeEvent!
 }

@@ -1034,50 +1034,141 @@ func (h *Handler) WebSocketHandler(c *gin.Context) {
 			ctx = gqlmiddleware.WithUserID(ctx, userID)
 			subscriptions[id] = cancel
 
-			// Start subscription
-			eventChan, err := h.Resolver.ReminderChanged(ctx)
-			if err != nil {
-				conn.WriteJSON(map[string]interface{}{
-					"type":    "error",
-					"id":      id,
-					"payload": []map[string]string{{"message": err.Error()}},
-				})
-				cancel()
-				delete(subscriptions, id)
-				continue
-			}
+			// Determine subscription type from the query
+			payload, _ := msg["payload"].(map[string]interface{})
+			query, _ := payload["query"].(string)
+			queryLower := strings.ToLower(query)
 
-			// Send events to client in background
-			go func(subID string) {
-				defer func() {
-					delete(subscriptions, subID)
-				}()
-
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					case event, ok := <-eventChan:
-						if !ok {
-							// Channel closed, send complete
-							conn.WriteJSON(map[string]interface{}{
-								"type": "complete",
-								"id":   subID,
-							})
-							return
-						}
-						conn.WriteJSON(map[string]interface{}{
-							"type": "next",
-							"id":   subID,
-							"payload": map[string]interface{}{
-								"data": map[string]interface{}{
-									"reminderChanged": event,
-								},
-							},
-						})
-					}
+			if strings.Contains(queryLower, "userchanged") {
+				// Handle userChanged subscription
+				eventChan, err := h.Resolver.UserChanged(ctx)
+				if err != nil {
+					conn.WriteJSON(map[string]interface{}{
+						"type":    "error",
+						"id":      id,
+						"payload": []map[string]string{{"message": err.Error()}},
+					})
+					cancel()
+					delete(subscriptions, id)
+					continue
 				}
-			}(id)
+
+				go func(subID string) {
+					defer func() {
+						delete(subscriptions, subID)
+					}()
+
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case event, ok := <-eventChan:
+							if !ok {
+								conn.WriteJSON(map[string]interface{}{
+									"type": "complete",
+									"id":   subID,
+								})
+								return
+							}
+							conn.WriteJSON(map[string]interface{}{
+								"type": "next",
+								"id":   subID,
+								"payload": map[string]interface{}{
+									"data": map[string]interface{}{
+										"userChanged": event,
+									},
+								},
+							})
+						}
+					}
+				}(id)
+			} else if strings.Contains(queryLower, "reminderlistchanged") {
+				// Handle reminderListChanged subscription
+				eventChan, err := h.Resolver.ReminderListChanged(ctx)
+				if err != nil {
+					conn.WriteJSON(map[string]interface{}{
+						"type":    "error",
+						"id":      id,
+						"payload": []map[string]string{{"message": err.Error()}},
+					})
+					cancel()
+					delete(subscriptions, id)
+					continue
+				}
+
+				go func(subID string) {
+					defer func() {
+						delete(subscriptions, subID)
+					}()
+
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case event, ok := <-eventChan:
+							if !ok {
+								conn.WriteJSON(map[string]interface{}{
+									"type": "complete",
+									"id":   subID,
+								})
+								return
+							}
+							conn.WriteJSON(map[string]interface{}{
+								"type": "next",
+								"id":   subID,
+								"payload": map[string]interface{}{
+									"data": map[string]interface{}{
+										"reminderListChanged": event,
+									},
+								},
+							})
+						}
+					}
+				}(id)
+			} else {
+				// Default: handle reminderChanged subscription
+				eventChan, err := h.Resolver.ReminderChanged(ctx)
+				if err != nil {
+					conn.WriteJSON(map[string]interface{}{
+						"type":    "error",
+						"id":      id,
+						"payload": []map[string]string{{"message": err.Error()}},
+					})
+					cancel()
+					delete(subscriptions, id)
+					continue
+				}
+
+				go func(subID string) {
+					defer func() {
+						delete(subscriptions, subID)
+					}()
+
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case event, ok := <-eventChan:
+							if !ok {
+								conn.WriteJSON(map[string]interface{}{
+									"type": "complete",
+									"id":   subID,
+								})
+								return
+							}
+							conn.WriteJSON(map[string]interface{}{
+								"type": "next",
+								"id":   subID,
+								"payload": map[string]interface{}{
+									"data": map[string]interface{}{
+										"reminderChanged": event,
+									},
+								},
+							})
+						}
+					}
+				}(id)
+			}
 
 		case "complete":
 			// Client wants to unsubscribe

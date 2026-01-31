@@ -170,7 +170,12 @@ func (r *Resolver) VerifySubscription(ctx context.Context) (*model.User, error) 
 		return nil, apperrors.ErrUserNotFound
 	}
 
-	return model.UserFromModel(user), nil
+	result := model.UserFromModel(user)
+
+	// Broadcast user change to all devices
+	r.broadcastUserChange(userID, model.ChangeActionUpdated, result)
+
+	return result, nil
 }
 
 // CreateReminder creates a new reminder
@@ -465,6 +470,22 @@ func (r *Resolver) broadcastReminderDelete(userID uuid.UUID, reminderID uuid.UUI
 		Reminder:   nil,
 		ReminderID: reminderID,
 		Timestamp:  time.Now(),
+	}
+
+	r.Hub.BroadcastToUser(userID, event)
+}
+
+func (r *Resolver) broadcastUserChange(userID uuid.UUID, action model.ChangeAction, user *model.User) {
+	if r.Hub == nil {
+		return
+	}
+
+	event := &model.UserChangeEvent{
+		TypeName:  "UserChangeEvent",
+		Action:    action,
+		User:      user,
+		UserID:    userID,
+		Timestamp: time.Now(),
 	}
 
 	r.Hub.BroadcastToUser(userID, event)

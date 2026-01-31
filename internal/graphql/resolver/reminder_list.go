@@ -134,6 +134,11 @@ func (r *Resolver) ReorderReminderLists(ctx context.Context, ids []uuid.UUID) ([
 		result[i] = dtoToReminderList(&lists[i])
 	}
 
+	// Broadcast change events for reordered lists
+	for _, list := range result {
+		r.broadcastReminderListChange(userID, model.ChangeActionUpdated, list)
+	}
+
 	return result, nil
 }
 

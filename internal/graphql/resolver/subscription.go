@@ -57,3 +57,91 @@ func (r *Resolver) ReminderChanged(ctx context.Context) (<-chan *model.ReminderC
 
 	return eventChan, nil
 }
+
+// ReminderListChanged returns a channel that receives reminder list change events
+func (r *Resolver) ReminderListChanged(ctx context.Context) (<-chan *model.ReminderListChangeEvent, error) {
+	userID, ok := middleware.GetUserID(ctx)
+	if !ok {
+		return nil, apperrors.ErrUnauthorized
+	}
+
+	eventChan := make(chan *model.ReminderListChangeEvent, 10)
+	hubChan := make(chan interface{}, 10)
+
+	if r.Hub != nil {
+		r.Hub.RegisterSubscription(userID, hubChan)
+	}
+
+	go func() {
+		defer close(eventChan)
+		defer func() {
+			if r.Hub != nil {
+				r.Hub.UnregisterSubscription(userID, hubChan)
+			}
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event, ok := <-hubChan:
+				if !ok {
+					return
+				}
+				if listEvent, ok := event.(*model.ReminderListChangeEvent); ok {
+					select {
+					case eventChan <- listEvent:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	return eventChan, nil
+}
+
+// UserChanged returns a channel that receives user change events
+func (r *Resolver) UserChanged(ctx context.Context) (<-chan *model.UserChangeEvent, error) {
+	userID, ok := middleware.GetUserID(ctx)
+	if !ok {
+		return nil, apperrors.ErrUnauthorized
+	}
+
+	eventChan := make(chan *model.UserChangeEvent, 10)
+	hubChan := make(chan interface{}, 10)
+
+	if r.Hub != nil {
+		r.Hub.RegisterSubscription(userID, hubChan)
+	}
+
+	go func() {
+		defer close(eventChan)
+		defer func() {
+			if r.Hub != nil {
+				r.Hub.UnregisterSubscription(userID, hubChan)
+			}
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case event, ok := <-hubChan:
+				if !ok {
+					return
+				}
+				if userEvent, ok := event.(*model.UserChangeEvent); ok {
+					select {
+					case eventChan <- userEvent:
+					case <-ctx.Done():
+						return
+					}
+				}
+			}
+		}
+	}()
+
+	return eventChan, nil
+}

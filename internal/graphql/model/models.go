@@ -514,6 +514,15 @@ type UpdateReminderListInput struct {
 	SortOrder *int    `json:"sortOrder"`
 }
 
+// User change event
+type UserChangeEvent struct {
+	TypeName  string       `json:"__typename"`
+	Action    ChangeAction `json:"action"`
+	User      *User        `json:"user"`
+	UserID    uuid.UUID    `json:"userId"`
+	Timestamp time.Time    `json:"timestamp"`
+}
+
 // ReminderList change event
 type ReminderListChangeEvent struct {
 	TypeName       string        `json:"__typename"`
