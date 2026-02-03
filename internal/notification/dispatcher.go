@@ -215,24 +215,6 @@ func (d *Dispatcher) SendCrossDeviceAction(ctx context.Context, userID uuid.UUID
 	return nil
 }
 
-// SendReminderNotification sends a reminder notification to all user devices
-func (d *Dispatcher) SendReminderNotification(ctx context.Context, reminder *models.Reminder) error {
-	payload := Payload{
-		Title:      "Reminder",
-		Body:       reminder.Title,
-		Sound:      "default",
-		Category:   "REMINDER_ACTIONS",
-		ReminderID: reminder.ID,
-		DueAt:      reminder.DueAt.Format("2006-01-02T15:04:05Z07:00"),
-	}
-
-	if reminder.Notes != nil && *reminder.Notes != "" {
-		payload.Body = reminder.Title + " - " + *reminder.Notes
-	}
-
-	return d.SendToUser(ctx, reminder.UserID, payload)
-}
-
 // SendSyncNotification sends a silent sync notification
 func (d *Dispatcher) SendSyncNotification(ctx context.Context, userID uuid.UUID, excludeDevice *uuid.UUID) error {
 	tokens, err := d.deviceRepo.GetAllPushTokens(userID)
