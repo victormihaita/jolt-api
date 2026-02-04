@@ -31,7 +31,6 @@ func (p Platform) String() string {
 type Priority string
 
 const (
-	PriorityNone   Priority = "NONE"
 	PriorityLow    Priority = "LOW"
 	PriorityNormal Priority = "NORMAL"
 	PriorityHigh   Priority = "HIGH"
@@ -39,7 +38,7 @@ const (
 
 func (p Priority) IsValid() bool {
 	switch p {
-	case PriorityNone, PriorityLow, PriorityNormal, PriorityHigh:
+	case PriorityLow, PriorityNormal, PriorityHigh:
 		return true
 	}
 	return false
@@ -59,7 +58,7 @@ func PriorityFromModel(p models.Priority) Priority {
 	case models.PriorityHigh:
 		return PriorityHigh
 	default:
-		return PriorityNone
+		return PriorityLow
 	}
 }
 
@@ -73,7 +72,7 @@ func PriorityToModel(p Priority) models.Priority {
 	case PriorityHigh:
 		return models.PriorityHigh
 	default:
-		return models.PriorityNone
+		return models.PriorityLow
 	}
 }
 

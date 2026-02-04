@@ -57,9 +57,15 @@ func (j *NotificationJob) ProcessDueReminders(ctx context.Context) (int, error) 
 		}
 
 		// Build the notification payload
+		// Title = reminder title, Body = notes (if any)
+		body := ""
+		if reminder.Notes != nil && *reminder.Notes != "" {
+			body = *reminder.Notes
+		}
+
 		payload := notification.Payload{
-			Title:      "Reminder",
-			Body:       reminder.Title,
+			Title:      reminder.Title,
+			Body:       body,
 			Sound:      notificationSound,
 			Category:   "REMINDER_ACTIONS",
 			ReminderID: reminder.ID,
@@ -76,9 +82,9 @@ func (j *NotificationJob) ProcessDueReminders(ctx context.Context) (int, error) 
 			payload.Data["sound_id"] = *reminder.SoundID
 		}
 
-		// Add notes to body if present
+		// Add notes to data payload for in-app banner
 		if reminder.Notes != nil && *reminder.Notes != "" {
-			payload.Body = reminder.Title + "\n" + *reminder.Notes
+			payload.Data["notes"] = *reminder.Notes
 		}
 
 		// Set alarm category if this is an alarm

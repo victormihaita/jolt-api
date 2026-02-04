@@ -199,7 +199,7 @@ func dtoToReminder(d *dto.ReminderDTO) *model.Reminder {
 		return nil
 	}
 
-	priority := model.PriorityNone
+	priority := model.PriorityLow
 	switch d.Priority {
 	case 1:
 		priority = model.PriorityLow
