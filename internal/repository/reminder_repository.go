@@ -96,8 +96,9 @@ func (r *ReminderRepository) List(params ReminderListParams) ([]models.Reminder,
 
 func (r *ReminderRepository) ListActive(userID uuid.UUID) ([]models.Reminder, error) {
 	var reminders []models.Reminder
+	// Simplified: snoozed reminders now have status="active" with updated dueAt
 	err := r.db.
-		Where("user_id = ? AND status IN ?", userID, []string{"active", "snoozed"}).
+		Where("user_id = ? AND status = ?", userID, models.StatusActive).
 		Order("due_at ASC NULLS LAST"). // Reminders without dates go to the end
 		Find(&reminders).Error
 	return reminders, err
@@ -132,8 +133,12 @@ func (r *ReminderRepository) SoftDelete(id uuid.UUID) error {
 
 func (r *ReminderRepository) Snooze(id uuid.UUID, until time.Time, deviceID *uuid.UUID) error {
 	updates := map[string]interface{}{
-		"status":               models.StatusSnoozed,
-		"snoozed_until":        until,
+		// Keep status as "active" - simplified snooze model
+		"status": models.StatusActive,
+		// Update dueAt directly instead of snoozedUntil
+		"due_at": until,
+		// Clear snoozedUntil for backward compat
+		"snoozed_until":        nil,
 		"snooze_count":         gorm.Expr("snooze_count + 1"),
 		"notification_sent_at": nil, // Clear so a new notification will be sent after snooze
 	}
@@ -185,10 +190,10 @@ func (r *ReminderRepository) Reactivate(id uuid.UUID) error {
 
 func (r *ReminderRepository) GetDueReminders(before time.Time) ([]models.Reminder, error) {
 	var reminders []models.Reminder
-	// Only include reminders with scheduled dates (due_at IS NOT NULL)
+	// Only include active reminders with scheduled dates (due_at IS NOT NULL)
+	// Simplified: snoozed reminders now have updated dueAt with status="active"
 	err := r.db.
 		Where("due_at IS NOT NULL AND status = ? AND due_at <= ?", models.StatusActive, before).
-		Or("status = ? AND snoozed_until <= ?", models.StatusSnoozed, before).
 		Preload("User").
 		Find(&reminders).Error
 	return reminders, err
@@ -203,15 +208,13 @@ func (r *ReminderRepository) CountByUser(userID uuid.UUID) (int64, error) {
 }
 
 // FindDueForNotification finds reminders that are due and haven't been notified yet
-// It looks for:
-// 1. Active reminders where due_at is now or in the past AND notification_sent_at IS NULL
-// 2. Snoozed reminders where snoozed_until is now or in the past AND notification_sent_at IS NULL
+// It looks for active reminders where due_at is now or in the past AND notification_sent_at IS NULL
 // Note: Reminders without scheduled dates (due_at IS NULL) are excluded from notifications
+// Simplified: snoozed reminders now have updated dueAt with status="active"
 func (r *ReminderRepository) FindDueForNotification(now time.Time) ([]models.Reminder, error) {
 	var reminders []models.Reminder
 	err := r.db.
-		Where("(due_at IS NOT NULL AND status = ? AND due_at <= ? AND notification_sent_at IS NULL)", models.StatusActive, now).
-		Or("(status = ? AND snoozed_until <= ? AND notification_sent_at IS NULL)", models.StatusSnoozed, now).
+		Where("due_at IS NOT NULL AND status = ? AND due_at <= ? AND notification_sent_at IS NULL", models.StatusActive, now).
 		Preload("User").
 		Find(&reminders).Error
 	return reminders, err

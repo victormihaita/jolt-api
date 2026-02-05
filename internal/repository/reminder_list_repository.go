@@ -95,10 +95,11 @@ func (r *ReminderListRepository) UpdateSortOrders(userID uuid.UUID, idOrders map
 }
 
 // GetReminderCountForList returns the count of active reminders in a list
+// Simplified: snoozed reminders now have status="active" with updated dueAt
 func (r *ReminderListRepository) GetReminderCountForList(listID uuid.UUID) (int64, error) {
 	var count int64
 	err := r.db.Model(&models.Reminder{}).
-		Where("list_id = ? AND status IN ?", listID, []string{"active", "snoozed"}).
+		Where("list_id = ? AND status = ?", listID, "active").
 		Count(&count).Error
 	return count, err
 }
