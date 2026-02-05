@@ -157,7 +157,14 @@ func (c *Client) SendData(ctx context.Context, deviceToken string, data map[stri
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("apns-topic", c.bundleID)
 	req.Header.Set("apns-push-type", "background")
-	req.Header.Set("apns-priority", "5")
+
+	// Use high priority for cross-device actions to ensure quick delivery
+	// so notifications/alarms are dismissed promptly on all devices
+	priority := "5"
+	if data["type"] == "cross_device_action" {
+		priority = "10"
+	}
+	req.Header.Set("apns-priority", priority)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
