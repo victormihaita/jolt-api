@@ -282,6 +282,43 @@ func main() {
 	}
 	log.Println("  ✓ sound_id column added (or already exists)")
 
+	// 12. Fix google_id unique index (migration 015)
+	// The original UNIQUE constraint on google_id prevents multiple Apple-only users
+	// because they all have google_id = '' (empty string). Convert to partial unique index.
+	log.Println("Fixing google_id unique index...")
+	fixGoogleIdSQL := `
+		DO $$
+		BEGIN
+			-- Drop the original UNIQUE constraint from CREATE TABLE
+			IF EXISTS (
+				SELECT 1 FROM information_schema.table_constraints
+				WHERE constraint_name = 'users_google_id_key' AND table_name = 'users'
+			) THEN
+				ALTER TABLE users DROP CONSTRAINT users_google_id_key;
+			END IF;
+		END $$;
+	`
+	if err := db.Exec(fixGoogleIdSQL).Error; err != nil {
+		log.Fatalf("Failed to drop google_id constraint: %v", err)
+	}
+
+	// Drop any existing non-partial unique index
+	db.Exec("DROP INDEX IF EXISTS idx_users_google_id")
+
+	// Set any empty string google_id values to NULL for consistency
+	if result := db.Exec("UPDATE users SET google_id = NULL WHERE google_id = ''"); result.Error != nil {
+		log.Printf("  Warning: Could not clean up empty google_id values: %v", result.Error)
+	} else {
+		log.Printf("  ✓ Cleaned up %d empty google_id values", result.RowsAffected)
+	}
+
+	// Create partial unique index (only enforces uniqueness on non-NULL values)
+	if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id) WHERE google_id IS NOT NULL").Error; err != nil {
+		log.Printf("  Warning: Could not create partial google_id index: %v", err)
+	} else {
+		log.Println("  ✓ google_id partial unique index created")
+	}
+
 	log.Println("")
 	log.Println("========================================")
 	log.Println("Migrations completed successfully!")

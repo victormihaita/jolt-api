@@ -120,7 +120,7 @@ func (r *UserRepository) FindOrCreate(googleID, email, displayName, avatarURL st
 
 	// Create new user
 	user = models.User{
-		GoogleID:    googleID,
+		GoogleID:    &googleID,
 		Email:       email,
 		DisplayName: displayName,
 		AvatarURL:   avatarURL,
@@ -192,7 +192,7 @@ func (r *UserRepository) FindOrCreateByAppleID(appleID, email, displayName strin
 		err = r.db.Where("email = ?", email).First(&user).Error
 		if err == nil {
 			// Link Apple ID to existing active account
-			user.AppleID = appleID
+			user.AppleID = &appleID
 			if displayName != "" && user.DisplayName == "" {
 				user.DisplayName = displayName
 			}
@@ -254,7 +254,7 @@ func (r *UserRepository) FindOrCreateByAppleID(appleID, email, displayName strin
 	}
 
 	user = models.User{
-		AppleID:     appleID,
+		AppleID:     &appleID,
 		Email:       userEmail,
 		DisplayName: userName,
 	}
