@@ -218,11 +218,6 @@ func (r *Resolver) CreateReminder(ctx context.Context, input model.CreateReminde
 	// Broadcast change event
 	r.broadcastReminderChange(userID, model.ChangeActionCreated, result)
 
-	// Notify other devices to sync
-	if r.NotificationDispatcher != nil {
-		go r.NotificationDispatcher.SendSyncNotification(ctx, userID, deviceID)
-	}
-
 	return result, nil
 }
 
@@ -271,11 +266,6 @@ func (r *Resolver) UpdateReminder(ctx context.Context, id uuid.UUID, input model
 
 	// Broadcast change event
 	r.broadcastReminderChange(userID, model.ChangeActionUpdated, result)
-
-	// Notify other devices to sync
-	if r.NotificationDispatcher != nil {
-		go r.NotificationDispatcher.SendSyncNotification(ctx, userID, deviceID)
-	}
 
 	return result, nil
 }

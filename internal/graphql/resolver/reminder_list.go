@@ -53,8 +53,6 @@ func (r *Resolver) CreateReminderList(ctx context.Context, input model.CreateRem
 		return nil, apperrors.ErrUnauthorized
 	}
 
-	deviceID, _ := middleware.GetDeviceID(ctx)
-
 	req := dto.CreateReminderListRequest{
 		Name:     input.Name,
 		ColorHex: input.ColorHex,
@@ -71,11 +69,6 @@ func (r *Resolver) CreateReminderList(ctx context.Context, input model.CreateRem
 	// Broadcast change event
 	r.broadcastReminderListChange(userID, model.ChangeActionCreated, result)
 
-	// Notify other devices to sync
-	if r.NotificationDispatcher != nil {
-		go r.NotificationDispatcher.SendSyncNotification(ctx, userID, deviceID)
-	}
-
 	return result, nil
 }
 
@@ -85,8 +78,6 @@ func (r *Resolver) UpdateReminderList(ctx context.Context, id uuid.UUID, input m
 	if !ok {
 		return nil, apperrors.ErrUnauthorized
 	}
-
-	deviceID, _ := middleware.GetDeviceID(ctx)
 
 	req := dto.UpdateReminderListRequest{
 		Name:      input.Name,
@@ -105,11 +96,6 @@ func (r *Resolver) UpdateReminderList(ctx context.Context, id uuid.UUID, input m
 	// Broadcast change event
 	r.broadcastReminderListChange(userID, model.ChangeActionUpdated, result)
 
-	// Notify other devices to sync
-	if r.NotificationDispatcher != nil {
-		go r.NotificationDispatcher.SendSyncNotification(ctx, userID, deviceID)
-	}
-
 	return result, nil
 }
 
@@ -120,8 +106,6 @@ func (r *Resolver) DeleteReminderList(ctx context.Context, id uuid.UUID) (bool, 
 		return false, apperrors.ErrUnauthorized
 	}
 
-	deviceID, _ := middleware.GetDeviceID(ctx)
-
 	err := r.ReminderListService.Delete(userID, id)
 	if err != nil {
 		return false, err
@@ -129,11 +113,6 @@ func (r *Resolver) DeleteReminderList(ctx context.Context, id uuid.UUID) (bool, 
 
 	// Broadcast delete event
 	r.broadcastReminderListDelete(userID, id)
-
-	// Notify other devices to sync
-	if r.NotificationDispatcher != nil {
-		go r.NotificationDispatcher.SendSyncNotification(ctx, userID, deviceID)
-	}
 
 	return true, nil
 }
