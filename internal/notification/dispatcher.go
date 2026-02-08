@@ -215,9 +215,19 @@ func (d *Dispatcher) SendCrossDeviceAction(ctx context.Context, userID uuid.UUID
 	return nil
 }
 
-// SendSyncNotification sends a silent sync notification
+// SendSyncNotification sends a silent sync notification to all devices except the originating one
 func (d *Dispatcher) SendSyncNotification(ctx context.Context, userID uuid.UUID, excludeDevice *uuid.UUID) error {
-	tokens, err := d.deviceRepo.GetAllPushTokens(userID)
+	var tokens []struct {
+		Platform  models.Platform
+		PushToken string
+	}
+	var err error
+
+	if excludeDevice != nil {
+		tokens, err = d.deviceRepo.GetPushTokensExcluding(userID, *excludeDevice)
+	} else {
+		tokens, err = d.deviceRepo.GetAllPushTokens(userID)
+	}
 	if err != nil {
 		return err
 	}

@@ -129,6 +129,14 @@ func (h *Handler) contextWithAuth(c *gin.Context) context.Context {
 		ctx = gqlmiddleware.WithDeviceID(ctx, *claims.DeviceID)
 	}
 
+	// Read X-Device-ID header (sent by clients to identify the originating device)
+	// This is used by mutation resolvers to exclude the originating device from cross-device notifications
+	if deviceIDHeader := c.GetHeader("X-Device-ID"); deviceIDHeader != "" {
+		if parsedID, err := uuid.Parse(deviceIDHeader); err == nil {
+			ctx = gqlmiddleware.WithDeviceID(ctx, parsedID)
+		}
+	}
+
 	return ctx
 }
 
@@ -969,7 +977,7 @@ func (h *Handler) WebSocketHandler(c *gin.Context) {
 	// Handle keep-alive in background
 	go func() {
 		for range ticker.C {
-			conn.WriteJSON(map[string]string{"type": "ka"})
+			conn.WriteJSON(map[string]string{"type": "ping"})
 		}
 	}()
 
